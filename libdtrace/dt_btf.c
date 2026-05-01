@@ -32,8 +32,8 @@ struct dt_btf {
 	size_t		size;			/* raw BTF data size */
 	btf_header_t	*hdr;			/* BTF header */
 	char		*sdata;			/* string data */
-	uint32_t	ssize;			/* string data size */
-	int32_t		type_cnt;		/* number of types */
+	const dt_btf_t	*parent;		/* parent BTF */
+	uint32_t	type_cnt;		/* number of types */
 	btf_type_t	**types;		/* type table */
 	ctf_id_t	*ctfids;		/* matching CTF type ids */
 };
@@ -71,12 +71,86 @@ dt_btf_error(dtrace_hdl_t *dtp, int eid, const char *format, ...)
 	va_end(ap);
 }
 
+static btf_type_t *
+dt_btf_type_by_id(const dt_btf_t *btf, int32_t id)
+{
+	const dt_btf_t	*shared_btf;
+	uint32_t	shared_cnt;
+
+	if (id == 0)
+		return &btf_void;
+
+	shared_btf = btf->parent;
+	if (shared_btf != NULL) {
+		shared_cnt = shared_btf->type_cnt;
+		if (id < shared_cnt)
+			return shared_btf->types[id];
+
+		if (shared_cnt > 0)
+			id -= shared_cnt - 1;
+	}
+
+	if (id < btf->type_cnt && id > 0)
+		return btf->types[id];
+
+	return NULL;
+}
+
+static btf_type_t *
+dt_btf_real_type_by_id(const dt_btf_t *btf, int32_t id)
+{
+	btf_type_t	*type = dt_btf_type_by_id(btf, id);
+
+	while (type != NULL) {
+		switch (BTF_INFO_KIND(type->info)) {
+		case BTF_KIND_CONST:
+		case BTF_KIND_FUNC:
+		case BTF_KIND_RESTRICT:
+		case BTF_KIND_TYPE_TAG:
+		case BTF_KIND_TYPEDEF:
+		case BTF_KIND_VOLATILE:
+			type = dt_btf_type_by_id(btf, type->type);
+			continue;
+		default:
+			return type;
+		}
+	}
+
+	return NULL;
+}
+
+static const char *
+dt_btf_get_string(const dt_btf_t *btf, uint32_t off)
+{
+	const dt_btf_t	*shared_btf;
+	int32_t		shared_len;
+
+	shared_btf = btf->parent;
+	if (shared_btf != NULL && shared_btf->hdr != NULL) {
+		shared_len = shared_btf->hdr->str_len;
+		if (off < shared_len)
+			return shared_btf->sdata + off;
+
+		off -= shared_len;
+	}
+
+	if (off < btf->hdr->str_len)
+		return btf->sdata + off;
+
+	return NULL;
+}
+
 static int
 dt_btf_validate_header(dtrace_hdl_t *dtp, dt_btf_t *btf)
 {
 	btf_header_t	*hdr = (btf_header_t *)btf->data;
 
-	btf->hdr = hdr;
+	if (btf->size < sizeof(btf_header_t)) {
+		dt_dprintf("BTF truncated header (%ld)\n", btf->size);
+		return dt_btf_set_errno(dtp, EINVAL);
+	}
+
+	hdr = (btf_header_t *)btf->data;
 
 	/* Validate magic number. */
 	if (hdr->magic != BTF_MAGIC) {
@@ -97,24 +171,39 @@ dt_btf_validate_header(dtrace_hdl_t *dtp, dt_btf_t *btf)
 		dt_dprintf("BTF type offset misaligned (%d)\n", hdr->type_off);
 		return dt_btf_set_errno(dtp, EINVAL);
 	}
-	if (hdr->type_off + hdr->type_len > hdr->str_off) {
+	if (hdr->type_off >= btf->size - hdr->hdr_len) {
+		dt_dprintf("BTF bad type offset (%d)\n", hdr->type_off);
+		return dt_btf_set_errno(dtp, EINVAL);
+	}
+	if (hdr->str_off <= hdr->type_off ||
+	    hdr->str_off >= btf->size - hdr->hdr_len) {
+		dt_dprintf("BTF bad string offset (%d)\n", hdr->str_off);
+		return dt_btf_set_errno(dtp, EINVAL);
+	}
+	if (hdr->type_len > hdr->str_off - hdr->type_off) {
 		dt_dprintf("BTF bad type section length (%d)\n", hdr->type_len);
 		return dt_btf_set_errno(dtp, EINVAL);
 	}
-	if (hdr->hdr_len + hdr->str_off + hdr->str_len > btf->size) {
+	if (hdr->str_len > btf->size - hdr->hdr_len - hdr->str_off) {
 		dt_dprintf("BTF bad string section length (%d)\n",
 			   hdr->str_len);
 		return dt_btf_set_errno(dtp, EINVAL);
 	}
+	if (((char *)btf->data)[hdr->hdr_len + hdr->str_off + hdr->str_len - 1] != 0) {
+		dt_dprintf("BTF string section is not NUL-terminated\n");
+		return dt_btf_set_errno(dtp, EINVAL);
+	}
+
+	btf->hdr = hdr;
 
 	return 0;
 }
 
-static size_t
+static ssize_t
 dt_btf_type_size(const char *ptr)
 {
 	btf_type_t	*type = (btf_type_t *)ptr;
-	size_t		size = sizeof(btf_type_t);
+	ssize_t		size = sizeof(btf_type_t);
 	int		vlen = BTF_INFO_VLEN(type->info);
 
 	switch (BTF_INFO_KIND(type->info)) {
@@ -164,7 +253,7 @@ dt_btf_decode(dtrace_hdl_t *dtp, dt_btf_t *btf)
 	char		*tdata;
 
 	if (dt_btf_validate_header(dtp, btf) == -1)
-		return -1;
+		return dt_btf_set_errno(dtp, EINVAL);
 
 	hdr = btf->hdr;
 	btf->sdata = (char *)btf->data + hdr->hdr_len + hdr->str_off;
@@ -175,19 +264,18 @@ dt_btf_decode(dtrace_hdl_t *dtp, dt_btf_t *btf)
 	end = tdata + hdr->type_len;
 	idx = 1;
 	while (ptr + sizeof(btf_type_t) <= end) {
-		int		size = dt_btf_type_size(ptr);
+		ssize_t		size = dt_btf_type_size(ptr);
 		btf_type_t	*type = (btf_type_t *)ptr;
 
-		if (size < 0)
-			return dt_btf_set_errno(dtp,  -size);
-		if (ptr + size > end)
-			return dt_btf_set_errno(dtp,  EINVAL);
-		if (dt_btf_get_string(dtp, btf, type->name_off) == NULL)
-			return dt_btf_set_errno(dtp,  EINVAL);
+		if (size < 0 || ptr + size > end ||
+		    dt_btf_get_string(btf, type->name_off) == NULL)
+			return dt_btf_set_errno(dtp, EINVAL);
 
 		idx++;
 		ptr += size;
 	}
+	if (ptr != end)
+		return dt_btf_set_errno(dtp, EINVAL);
 
 	/* Next, populate the type offsets table. */
 	btf->type_cnt = idx;
@@ -198,11 +286,16 @@ dt_btf_decode(dtrace_hdl_t *dtp, dt_btf_t *btf)
 	ptr = tdata;
 	idx = 1;
 	while (ptr + sizeof(btf_type_t) <= end) {
-		int	size = dt_btf_type_size(ptr);
+		ssize_t	size = dt_btf_type_size(ptr);
+
+		if (size < 0)
+			return dt_btf_set_errno(dtp, EINVAL);
 
 		btf->types[idx++] = (btf_type_t *)ptr;
 		ptr += size;
 	}
+	if (ptr != end)
+		return dt_btf_set_errno(dtp, EINVAL);
 
 	return 0;
 }
@@ -216,11 +309,10 @@ dt_btf_decode(dtrace_hdl_t *dtp, dt_btf_t *btf)
 static dt_btf_t *
 dt_btf_load(dtrace_hdl_t *dtp, const char *fn)
 {
-	FILE		*fp;
+	FILE		*fp = NULL;
 	dt_btf_t	*btf = NULL;
 	btf_header_t	hdr;
-	void		*data = NULL;
-	Elf		*elf;
+	Elf		*elf = NULL;
 	size_t		shstrs;
 	Elf_Scn		*sp = NULL;
 	int		err = 0;
@@ -230,36 +322,45 @@ dt_btf_load(dtrace_hdl_t *dtp, const char *fn)
 		return dt_btf_set_load_errno(dtp, ENOMEM);
 
 	fp = fopen(fn, "rb");
-	if (fp == NULL)
-		goto err;
+	if (fp == NULL) {
+		dtp->dt_btferr = errno;
+		goto fail;
+	}
 
 	/* First see whether this might be a file with raw BTF data. */
-	if (fread(&hdr, 1, sizeof(hdr), fp) < sizeof(hdr))
+	if (fread(&hdr, 1, sizeof(hdr), fp) < sizeof(hdr)) {
+		dtp->dt_btferr = ferror(fp) ? EIO : EINVAL;
 		goto fail;
+	}
 
 	rewind(fp);
 	if (hdr.magic == BTF_MAGIC) {
 		struct stat	st;
 
-		if (fstat(fileno(fp), &st) == -1)
+		if (fstat(fileno(fp), &st) == -1) {
+			dtp->dt_btferr = errno;
 			goto fail;
+		}
 
-		data = dt_alloc(dtp, st.st_size);
-		if (data == NULL)
+		btf->data = dt_alloc(dtp, st.st_size);
+		if (btf->data == NULL) {
+			dtp->dt_btferr = ENOMEM;
 			goto fail;
+		}
 
-		if (fread(data, 1, st.st_size, fp) < st.st_size)
+		if (fread(btf->data, 1, st.st_size, fp) < st.st_size) {
+			dtp->dt_btferr = ferror(fp) ? EIO : EINVAL;
 			goto fail;
+		}
 
-		fclose(fp);
-
-		btf->data = data;
 		btf->size = st.st_size;
 	} else {
 		/* Next see whether this might be an ELF file with BTF data. */
 		elf = elf_begin(fileno(fp), ELF_C_READ_MMAP, NULL);
-		if (elf == NULL)
-			goto elf_fail_no_end;
+		if (elf == NULL) {
+			dtp->dt_btferr = EINVAL;
+			goto elf_fail;
+		}
 		if (elf_getshdrstrndx(elf, &shstrs) == -1)
 			goto elf_fail;
 
@@ -282,64 +383,147 @@ dt_btf_load(dtrace_hdl_t *dtp, const char *fn)
 			if (edata == NULL)
 				goto elf_fail;
 
-			data = dt_alloc(dtp, edata->d_size);
-			if (data == NULL)
-				goto elf_fail;
+			btf->data = dt_alloc(dtp, edata->d_size);
+			if (btf->data == NULL) {
+				dtp->dt_btferr = ENOMEM;
+				goto fail;
+			}
 
-			memcpy(data, edata->d_buf, edata->d_size);
+			memcpy(btf->data, edata->d_buf, edata->d_size);
 
-			btf->data = data;
 			btf->size = edata->d_size;
-
-			elf_end(elf);
-			fclose(fp);
-
 			break;
+		}
+		if (btf->data == NULL) {
+			dtp->dt_btferr = ENOENT;
+			goto fail;
 		}
 	}
 
+	if (elf != NULL)
+		elf_end(elf);
+	fclose(fp);
 	return btf;
 
 elf_fail:
-	elf_end(elf);
-
-elf_fail_no_end:
+	dtp->dt_btferr = EINVAL;
 	err = elf_errno();
-	dt_btf_error(dtp, 0, "BTF: %s", elf_errmsg(err));
+	dt_btf_error(dtp, 0, "ELF: %s", elf_errmsg(err));
 
 fail:
-	fclose(fp);
-	dt_free(dtp, data);
-
-err:
-	dt_free(dtp, btf);
-	dt_btf_set_errno(dtp,  err ? err : errno);
-
+	if (elf != NULL)
+		elf_end(elf);
+	if (fp != NULL)
+		fclose(fp);
+	dt_dprintf("Cannot open BTF file %s: %s\n", fn,
+			   dt_btf_errmsg(dtp->dt_btferr));
+	dt_btf_destroy(dtp, btf);
 	return NULL;
 }
 
 dt_btf_t *
-dt_btf_load_file(dtrace_hdl_t *dtp, const char *fn)
+dt_btf_load_file(dtrace_hdl_t *dtp, const char *fn, const dt_btf_t *parent)
 {
 	dt_btf_t	*btf;
 
+	/*
+	 * Missing BTF or allocation failure returns NULL; invalid data leaves
+	 * an empty BTF.
+	 */
 	btf = dt_btf_load(dtp, fn);
-	if (btf == NULL) {
-		dt_dprintf("Cannot open BTF file %s: %s\n", fn,
-			   dt_btf_errmsg(dtp->dt_btferr));
+	if (btf == NULL)
 		return NULL;
-	}
 
-	if (dt_btf_decode(dtp, btf) == -1) {
+	btf->parent = parent;
+
+	/* Decode the loaded BTF data. */
+	if (btf->data && dt_btf_decode(dtp, btf) == -1) {
+		if (dtp->dt_btferr == ENOMEM) {
+			dt_btf_destroy(dtp, btf);
+			return NULL;
+		}
+
+		/*
+		 * Failure to decode the data leaves us with just one option:
+		 * pretend the module has no type data beyond its parent's
+		 * data.
+		 */
 		dt_dprintf("Cannot decode BTF data %s: %s\n", fn,
 			   dt_btf_errmsg(dtp->dt_btferr));
-		dt_btf_destroy(dtp, btf);
-		return NULL;
+
+		dt_free(dtp, btf->data);
+		dt_free(dtp, btf->types);
+		memset(btf, 0, sizeof(*btf));
+		btf->parent = parent;
 	}
 
 	dt_dprintf("BTF file %s: %d types\n", fn, btf->type_cnt);
 
 	return btf;
+}
+
+dt_btf_t *
+dt_btf_load_module(dtrace_hdl_t *dtp, dt_module_t *dmp)
+{
+	char		*fn = NULL;
+	int		rc = 0;
+	const dt_btf_t	*parent = NULL;
+
+	assert(dmp != NULL);
+
+	/* If already tried this for the module, return what we have. */
+	if (dmp->dm_flags & DT_DM_BTF_LOADED)
+		return dmp->dm_btf;
+
+	/*
+	 * If the module is not vmlinux, we will use the vmlinux BTF data as the
+	 * parent.
+	 */
+	if (dmp != dtp->dt_exec) {
+		parent = dtp->dt_exec->dm_btf;
+		/* If we do not have it yet, try to load it. */
+		if (parent == NULL)
+			parent = dt_btf_load_module(dtp, dtp->dt_exec);
+		/* If loading failed, the module cannot have BTF data either. */
+		if (parent == NULL)
+			return NULL;
+	}
+
+	/*
+	 * Default: /sys/kernel/btf/<module>
+	 * If "none", disable BTF.
+	 * Otherwise: <BTF path>/<module>
+	 */
+	if (dtp->dt_btf_path == NULL)
+		rc = asprintf(&fn, "/sys/kernel/btf/%s", dmp->dm_name);
+	else if (strcmp(dtp->dt_btf_path, "none") == 0)
+		return NULL;
+	else
+		rc = asprintf(&fn, "%s/%s", dtp->dt_btf_path, dmp->dm_name);
+
+	if (rc == -1)
+		return dt_btf_set_load_errno(dtp, ENOMEM);
+
+	dmp->dm_btf = dt_btf_load_file(dtp, fn, parent);
+	free(fn);
+
+	if (dmp->dm_btf == NULL) {
+		if (dtp->dt_btferr != ENOENT)
+			return NULL;
+
+		/* A missing module BTF file still inherits its parent's types. */
+		if (parent != NULL) {
+			dmp->dm_btf = dt_zalloc(dtp, sizeof(dt_btf_t));
+			if (dmp->dm_btf == NULL)
+				return dt_btf_set_load_errno(dtp, ENOMEM);
+
+			dmp->dm_btf->parent = parent;
+		}
+	}
+
+	dmp->dm_flags |= DT_DM_BTF_LOADED;
+
+	return dmp->dm_btf;
 }
 
 void
@@ -371,8 +555,9 @@ dt_ctf_error(dtrace_hdl_t *dtp, ctf_dict_t *ctf)
 
 static ctf_id_t
 dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
-		  int32_t type_id)
+		  uint32_t type_id)
 {
+	const dt_btf_t	*shared_btf = btf->parent;
 	btf_type_t	*type;
 	int		kind, vlen;
 	const char	*name;
@@ -383,11 +568,12 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 	 * If we already have shared_ctf, we may be looking for a type in that
 	 * shared_ctf.
 	 */
-	if (dt_module_shared_ctf(dtp) && btf != dtp->dt_shared_btf) {
-		if (type_id < dtp->dt_shared_btf->type_cnt)
-			return dtp->dt_shared_btf->ctfids[type_id];
+	if (dt_module_shared_ctf(dtp) && shared_btf != NULL) {
+		if (type_id < shared_btf->type_cnt)
+			return shared_btf->ctfids[type_id];
 
-		type_id -= dtp->dt_shared_btf->type_cnt - 1;
+		if (shared_btf->type_cnt > 0)
+			type_id -= shared_btf->type_cnt - 1;
 	}
 
 	assert(type_id < btf->type_cnt);
@@ -400,9 +586,11 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 	type = btf->types[type_id];
 	kind = BTF_INFO_KIND(type->info);
 	vlen = BTF_INFO_VLEN(type->info);
-	name = dt_btf_get_string(dtp, btf, type->name_off);
+	name = dt_btf_get_string(btf, type->name_off);
+	if (name == NULL)
+		return dt_ctf_set_errno(dtp, ECTF_NAMELEN);
 
-	if (name && name[0]) {
+	if (name[0]) {
 		char	n[DT_TYPE_NAMELEN];
 
 		/* Do we already have this type? */
@@ -498,7 +686,9 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 			int	err;
 			const char	*iname;
 
-			iname = dt_btf_get_string(dtp, btf, item->name_off);
+			iname = dt_btf_get_string(btf, item->name_off);
+			if (iname == NULL)
+				return dt_ctf_set_errno(dtp, ECTF_NAMELEN);
 			err = ctf_add_enumerator(ctf, ctfid, iname, item->val);
 			if (err == CTF_ERR)
 				return dt_ctf_error(dtp, ctf);
@@ -599,7 +789,9 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 			mbid = dt_btf_add_to_ctf(dtp, btf, ctf, item->type);
 			if (mbid == CTF_ERR)
 				return CTF_ERR;
-			mname = dt_btf_get_string(dtp, btf, item->name_off);
+			mname = dt_btf_get_string(btf, item->name_off);
+			if (mname == NULL)
+				return dt_ctf_set_errno(dtp, ECTF_NAMELEN);
 
 			if (BTF_INFO_KFLAG(type->info)) {
 				enc.cte_format = 0;
@@ -741,6 +933,13 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 	if (!btf)
 		goto out;
 
+	/*
+	 * If we were not able to read the BTF data, and we are constructing
+	 * 'shared_ctf', we need space for the default 'void' type.
+	 */
+	if (!dmp && !btf->type_cnt)
+		btf->type_cnt = 1;
+
 	btf->ctfids = dt_calloc(dtp, btf->type_cnt, sizeof(ctf_id_t));
 	for (i = 1; i < btf->type_cnt; i++)
 		btf->ctfids[i] = CTF_ERR;
@@ -758,14 +957,14 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 		/*
 		 * Any module other than 'vmlinux' inherits the types from
 		 * 'vmlinux'.
-		 * Shared types are 1 through dt_shared_btf->type_cnt - 1
+		 * Shared types are 1 through btf->parent->type_cnt - 1
 		 * (base).
 		 * A module's types are base through base + btf->type_cnt - 1,
 		 * but the types are stored in the BTF types array with indexes
 		 * 1 through btf->type_cnt - 1.
 		 */
-		if (btf != dtp->dt_shared_btf)
-			base = dtp->dt_shared_btf->type_cnt - 1;
+		if (btf->parent != NULL && btf->parent->type_cnt > 0)
+			base = btf->parent->type_cnt - 1;
 	}
 
 	for (i = 1; i < btf->type_cnt; i++) {
@@ -788,40 +987,6 @@ out:
 	return ctf;
 }
 #endif
-
-dt_btf_t *
-dt_btf_load_module(dtrace_hdl_t *dtp, dt_module_t *dmp)
-{
-	char		*fn = NULL;
-	int		rc = 0;
-	dt_btf_t	*btf;
-
-	if (dmp->dm_btf)
-		return dmp->dm_btf;
-
-	/*
-	 * Default: /sys/kernel/btf/<module>
-	 * If "none", disable BTF.
-	 * Otherwise: <BTF path>/<module>
-	 */
-	if (dtp->dt_btf_path == NULL)
-		rc = asprintf(&fn, "/sys/kernel/btf/%s", dmp->dm_name);
-	else if (strcmp(dtp->dt_btf_path, "none") == 0)
-		return NULL;
-	else
-		rc = asprintf(&fn, "%s/%s", dtp->dt_btf_path, dmp->dm_name);
-
-	if (rc == -1)
-		return dt_btf_set_load_errno(dtp, ENOMEM);
-
-	btf = dt_btf_load_file(dtp, fn);
-	free(fn);
-
-	if (btf && !dtp->dt_shared_btf && strcmp(dmp->dm_name, "vmlinux") == 0)
-		dtp->dt_shared_btf = btf;
-
-	return dmp->dm_btf = btf;
-}
 
 ctf_dict_t *
 dt_btf_module_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
@@ -854,8 +1019,7 @@ dt_btf_module_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		shared->dm_flags |= DT_DM_LOADED;
 	}
 
-	ctf = dt_btf_to_ctf(dtp, dmp,
-			    btf == dtp->dt_shared_btf ? NULL : btf);
+	ctf = dt_btf_to_ctf(dtp, dmp, btf);
 
 	dt_dprintf("Generated %s CTF from BTF (%d types).\n", dmp->dm_name,
 		   btf->type_cnt);
@@ -864,96 +1028,13 @@ dt_btf_module_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	return ctf;
 }
 
-static btf_type_t *
-dt_btf_type_by_id(dtrace_hdl_t *dtp, const dt_btf_t *btf, int32_t id)
+static uint32_t
+dt_btf_lookup_name_kind2(const dt_btf_t *btf, int32_t base, const char *name,
+			 uint32_t kind)
 {
-	if (id == 0)
-		return &btf_void;
-	if (id < dtp->dt_shared_btf->type_cnt)
-		return dtp->dt_shared_btf->types[id];
+	uint32_t	i;
 
-	return btf->types[id - (dtp->dt_shared_btf->type_cnt - 1)];
-}
-
-static btf_type_t *
-dt_btf_real_type_by_id(dtrace_hdl_t *dtp, const dt_btf_t *btf, int32_t id)
-{
-	btf_type_t	*type = dt_btf_type_by_id(dtp, btf, id);
-
-	do {
-		switch (BTF_INFO_KIND(type->info)) {
-		case BTF_KIND_CONST:
-		case BTF_KIND_FUNC:
-		case BTF_KIND_RESTRICT:
-		case BTF_KIND_TYPE_TAG:
-		case BTF_KIND_TYPEDEF:
-		case BTF_KIND_VOLATILE:
-			type = dt_btf_type_by_id(dtp, btf, type->type);
-		default:
-			return type;
-		}
-	} while (type != NULL);
-
-	return NULL;
-}
-
-const char *
-dt_btf_get_string(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t off)
-{
-	if (dtp->dt_shared_btf == NULL)
-		goto ok;
-
-	/* Check if the offset is within the base BTF string area. */
-	if (btf == dtp->dt_shared_btf || off < dtp->dt_shared_btf->hdr->str_len)
-		return dtp->dt_shared_btf->sdata + off;
-
-	off -= dtp->dt_shared_btf->hdr->str_len;
-ok:
-	if (off < btf->hdr->str_len)
-		return btf->sdata + off;
-
-	return dt_btf_set_load_errno(dtp, EINVAL);
-}
-
-int32_t
-dt_btf_lookup_name_kind(dtrace_hdl_t *dtp, dt_module_t *dmp, const char *name,
-			uint32_t kind)
-{
-	dt_btf_t	*btf = dmp->dm_btf;
-	int32_t		i, base = 0;
-
-	if (kind == BTF_KIND_UNKN)
-		return -ENOENT;
-	if (strcmp(name, "void") == 0)
-		return 0;
-
-	/* Ensure the shared BTF is loaded. */
-	if (!dtp->dt_shared_btf)
-		dt_btf_load_module(dtp, dtp->dt_exec);
-
-	/* If the module does not have BTF data yet, try to load it. */
-	if (!btf) {
-		btf = dt_btf_load_module(dtp, dmp);
-
-		/* If no BTF module data was found, use the shared BTF. */
-		if (!btf)
-			btf = dtp->dt_shared_btf;
-
-		if (!btf)
-			return -ENOENT;
-	}
-
-	/*
-	 * Any module other than 'vmlinux' inherits the types from 'vmlinux'.
-	 * The shared types are 1 through (base = dtp->dt_btf->type_cnt - 1).
-	 * A module's types are base through (base + btf->type_cnt - 1), but
-	 * the types are stored in the BTF types array with indexes 1 through
-	 * (btf->type_cnt - 1).
-	 */
-	if (btf != dtp->dt_shared_btf)
-		base = dtp->dt_shared_btf->type_cnt - 1;
-
-
+	/* Look through the type data for a match. */
 	for (i = 1; i < btf->type_cnt; i++) {
 		const btf_type_t	*type = btf->types[i];
 		const char		*str;
@@ -961,15 +1042,51 @@ dt_btf_lookup_name_kind(dtrace_hdl_t *dtp, dt_module_t *dmp, const char *name,
 		if (BTF_INFO_KIND(type->info) != kind)
 			continue;
 
-		str = dt_btf_get_string(dtp, btf, type->name_off);
-		if (str && strcmp(name, str) == 0)
+		str = dt_btf_get_string(btf, type->name_off);
+		if (str == NULL)
+			continue;
+		if (strcmp(name, str) == 0)
 			return i + base;
 	}
 
-	if (base > 0)
-		return dt_btf_lookup_name_kind(dtp, dtp->dt_exec, name, kind);
+	return BTF_TYPE_NONE;
+}
 
-	return -ENOENT;
+uint32_t
+dt_btf_lookup_name_kind(dtrace_hdl_t *dtp, dt_module_t *dmp, const char *name,
+			uint32_t kind)
+{
+	dt_btf_t	*btf;
+	const dt_btf_t	*parent;
+	int32_t		base = 0, id;
+
+	if (kind == BTF_KIND_UNKN)
+		return BTF_TYPE_NONE;
+	if (strcmp(name, "void") == 0)
+		return 0;
+
+	/* Get BTF data for the module. */
+	btf = dt_btf_load_module(dtp, dmp);
+
+	/* No type lookup without BTF data. */
+	if (!btf)
+		return BTF_TYPE_NONE;
+
+	/*
+	 * BTF type data for a module is split between two BTF data source:
+	 *   shared	[ 0 .. parent->type_cnt - 1 ]
+	 *   local	base + [ 1 .. type_cnt ]
+	 *   			with base = parent->type_cnt - 1
+	 */
+	parent = btf->parent;
+	if (parent != NULL && parent->type_cnt > 0)
+		base = parent->type_cnt - 1;
+
+	id = dt_btf_lookup_name_kind2(btf, base, name, kind);
+	if (id == BTF_TYPE_NONE && parent != NULL)
+		id = dt_btf_lookup_name_kind2(parent, 0, name, kind);
+
+	return id;
 }
 
 int
@@ -1025,9 +1142,9 @@ dt_btf_module_fd(const dt_module_t *dmp)
 }
 
 int
-dt_btf_func_argc(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
+dt_btf_func_argc(const dt_btf_t *btf, uint32_t id)
 {
-	btf_type_t	*type = dt_btf_real_type_by_id(dtp, btf, id);
+	btf_type_t	*type = dt_btf_real_type_by_id(btf, id);
 
 	if (type == NULL)
 		return -1;
@@ -1039,9 +1156,9 @@ dt_btf_func_argc(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
 }
 
 int
-dt_btf_func_is_void(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
+dt_btf_func_is_void(const dt_btf_t *btf, uint32_t id)
 {
-	btf_type_t	*type = dt_btf_real_type_by_id(dtp, btf, id);
+	btf_type_t	*type = dt_btf_real_type_by_id(btf, id);
 
 	if (type != NULL &&
 	    BTF_INFO_KIND(type->info) == BTF_KIND_FUNC_PROTO && type->type == 0)
@@ -1058,9 +1175,9 @@ dt_btf_func_is_void(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
  */
 #define MAX_BPF_FUNC_REG_REGS	5
 int
-dt_btf_func_is_traceable(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
+dt_btf_func_is_traceable(const dt_btf_t *btf, uint32_t id)
 {
-	btf_type_t	*type = dt_btf_real_type_by_id(dtp, btf, id);
+	btf_type_t	*type = dt_btf_real_type_by_id(btf, id);
 	int		argc;
 
 	/* If no prototype is found, BPF fprobes do not work. */
@@ -1069,7 +1186,7 @@ dt_btf_func_is_traceable(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
 
 	/* If the return type is a struct or union, BPF fprobes do not work. */
 	if (type->type != 0) {
-		btf_type_t	*rtype = dt_btf_real_type_by_id(dtp, btf, type->type);
+		btf_type_t	*rtype = dt_btf_real_type_by_id(btf, type->type);
 
 		if (rtype == NULL)
 			return 0;
@@ -1095,7 +1212,7 @@ dt_btf_func_is_traceable(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
 			return 0;
 
 		for (i = 0; i < argc; i++) {
-			type = dt_btf_real_type_by_id(dtp, btf, args[i].type);
+			type = dt_btf_real_type_by_id(btf, args[i].type);
 			if (type == NULL)
 				return 0;
 

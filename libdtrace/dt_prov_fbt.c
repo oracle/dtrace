@@ -103,11 +103,11 @@ static int provide_probe(dtrace_hdl_t *dtp, dt_module_t *dmp,
 	 * details).
 	 */
 	if (prv->impl->prog_type == BPF_PROG_TYPE_TRACING) {
-		int32_t	btf_id;
+		uint32_t	btf_id;
 
 		btf_id = dt_btf_lookup_name_kind(dtp, dmp, pdp->fun, BTF_KIND_FUNC);
-		if (btf_id <= 0 ||
-		    !dt_btf_func_is_traceable(dtp, dmp->dm_btf, btf_id))
+		if (btf_id == BTF_TYPE_NONE ||
+		    !dt_btf_func_is_traceable(dmp->dm_btf, btf_id))
 			return -1;
 	}
 
@@ -355,7 +355,7 @@ static int fprobe_probe_info(dtrace_hdl_t *dtp, const dt_probe_t *prp,
 {
 	const dtrace_probedesc_t	*desc = prp->desc;
 	dt_module_t			*dmp;
-	int32_t				btf_id;
+	uint32_t			btf_id;
 	int				i, argc = 0;
 	dt_argdesc_t			*argv = NULL;
 
@@ -364,14 +364,14 @@ static int fprobe_probe_info(dtrace_hdl_t *dtp, const dt_probe_t *prp,
 		goto done;
 
 	btf_id = dt_btf_lookup_name_kind(dtp, dmp, desc->fun, BTF_KIND_FUNC);
-	if (btf_id <= 0)
+	if (btf_id == BTF_TYPE_NONE)
 		goto done;
 
 	dt_tp_probe_set_id(prp, btf_id);
 
 	if (strcmp(desc->prb, "return") == 0) {
 		/* Void function return probes only provide 1 argument. */
-		argc = dt_btf_func_is_void(dtp, dmp->dm_btf, btf_id) ? 1 : 2;
+		argc = dt_btf_func_is_void(dmp->dm_btf, btf_id) ? 1 : 2;
 
 		argv = dt_calloc(dtp, argc, sizeof(dt_argdesc_t));
 		if (argv == NULL)
@@ -392,8 +392,8 @@ static int fprobe_probe_info(dtrace_hdl_t *dtp, const dt_probe_t *prp,
 		goto done;
 	}
 
-	argc = dt_btf_func_argc(dtp, dmp->dm_btf, btf_id);
-	if (argc == 0)
+	argc = dt_btf_func_argc(dmp->dm_btf, btf_id);
+	if (argc <= 0)
 		goto done;
 
 	argv = dt_calloc(dtp, argc, sizeof(dt_argdesc_t));
