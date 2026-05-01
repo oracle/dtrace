@@ -202,6 +202,7 @@ typedef struct dt_kern_path {
 #define DT_DM_KERNEL		0x02	/* module is associated with a kernel object */
 #define DT_DM_CTF_ARCHIVED	0x04	/* module found in a CTF archive */
 #define DT_DM_KERN_UNLOADED	0x08	/* module not loaded into the kernel */
+#define DT_DM_BTF_LOADED	0x10	/* module BTF data loaded */
 #define DT_DM_SHARED		0x20	/* module owns shared kernel CTF */
 #define DT_DM_KERN_SYMS		0x40	/* kernel symbols discovered and finalized */
 
@@ -311,7 +312,6 @@ struct dtrace_hdl {
 	ctf_archive_t *dt_ctfa; /* ctf archive for the entire kernel tree */
 	void *dt_ctfa_data;	/* backing data for dt_ctfa */
 	char *dt_btf_path;	/* path to vmlinux.btf */
-	struct dt_btf *dt_shared_btf; /* BTF data for the kernel (shared) */
 	dt_htab_t *dt_kernpaths; /* hash table of dt_kern_path_t's */
 	dt_module_t *dt_exec;	/* pointer to executable module */
 	dt_module_t *dt_cdefs;	/* pointer to C dynamic type module */

@@ -1045,8 +1045,7 @@ dt_module_clear_elf(dt_module_t *dmp)
 static void
 dt_module_destroy(dtrace_hdl_t *dtp, dt_module_t *dmp)
 {
-	if (dmp->dm_btf != dtp->dt_shared_btf)
-		dt_btf_destroy(dtp, dmp->dm_btf);
+	dt_btf_destroy(dtp, dmp->dm_btf);
 	ctf_close(dmp->dm_ctfp);
 	dt_module_clear_elf(dmp);
 	dt_symtab_destroy(dtp, dmp->dm_kernsyms);
@@ -1253,23 +1252,24 @@ dt_kern_module_ctf_from_btf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 static void
 dt_kern_module_find_btf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 {
+	/* The vmlinux module nust already exist as dtp->dt_exec. */
+	assert(dtp->dt_exec != NULL);
+
 	/*
 	 * If there is no shared BTF data, and we're trying to load BTF data
-	 * for any module other than "vmlinux", we can conclude no module has
+	 * for any module other than vmlinux, we can conclude no module has
 	 * valid BTF data.
 	 */
-	if (dtp->dt_shared_btf == NULL && strcmp(dmp->dm_name, "vmlinux") != 0)
+	if (dtp->dt_exec->dm_btf == NULL && dmp != dtp->dt_exec)
 		return;
 
 	dt_dprintf("Loading BTF for module %s.\n", dmp->dm_name);
 
 	/*
-	 * If no module specific BTF is found, we assume it is a builtin
-	 * module and we assign the shared BTF to it.  That is the fallback
-	 * anyway for type lookups in modules, so it is safe.
+	 * If no module specific BTF is found, the kernel either does not
+	 * provide any BTF data or something went wrong.  Neither is fatal.
 	 */
-	if (dt_btf_load_module(dtp, dmp) == NULL)
-		dmp->dm_btf = dtp->dt_shared_btf;
+	dt_btf_load_module(dtp, dmp);
 }
 
 /*
