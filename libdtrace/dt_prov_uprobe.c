@@ -37,6 +37,7 @@
 #include "dt_dctx.h"
 #include "dt_cg.h"
 #include "dt_list.h"
+#include "dt_module.h"
 #include "dt_provider_tp.h"
 #include "dt_probe.h"
 #include "dt_program.h"
@@ -399,6 +400,161 @@ static int populate_usdt(dtrace_hdl_t *dtp)
 		return -1;			/* errno already set */
 
 	return 0;
+}
+
+/* Create a concrete probe, retaining existing probes across provide calls. */
+static int provide_uprobe(dtrace_hdl_t *dtp, dt_provider_t *prv,
+			  dt_module_t *dmp, const char *fun, uint64_t off,
+			  int flags)
+{
+	dtrace_probedesc_t pd = {
+		.prv = prv->desc.dtvd_name,
+		.mod = dmp->dm_name,
+		.fun = fun,
+		.prb = flags & PP_IS_RETURN ? "return" : "entry",
+	};
+	dt_uprobe_t	*upp;
+
+	if (dt_probe_lookup(dtp, &pd) != NULL)
+		return 0;
+
+	upp = dt_zalloc(dtp, sizeof(dt_uprobe_t));
+	if (upp == NULL)
+		return 0;
+
+	upp->fn = strdup(dmp->dm_file);
+	if (upp->fn == NULL) {
+		dt_free(dtp, upp);
+		return 0;
+	}
+	upp->off = off;
+	upp->fd = -1;
+	upp->pid = -1;
+	upp->flags = flags;
+
+	if (dt_probe_insert(dtp, prv, pd.prv, pd.mod, pd.fun, pd.prb,
+			    upp) != NULL)
+		return 1;
+
+	dt_free(dtp, upp->fn);
+	dt_free(dtp, upp);
+	return 0;
+}
+
+/* Probe kinds selected by provide(), independent of per-probe PP_IS_* flags. */
+#define PROVIDE_ENTRY	0x1
+#define PROVIDE_RETURN	0x2
+
+/* Match defined functions in both regular and dynamic ELF symbol tables. */
+static int provide_module(dtrace_hdl_t *dtp, dt_provider_t *prv,
+			  dt_module_t *dmp, const dtrace_probedesc_t *pdp,
+			  int flags)
+{
+	dtrace_objinfo_t	info;
+	Elf_Scn		*scn = NULL;
+	int		n = 0;
+
+	if ((dmp->dm_flags & DT_DM_KERNEL) || dmp->dm_file[0] == '\0' ||
+	    dtrace_object_info(dtp, dmp->dm_name, &info) == -1 ||
+	    dmp->dm_elf == NULL)
+		return 0;
+
+	while ((scn = elf_nextscn(dmp->dm_elf, scn)) != NULL) {
+		GElf_Shdr	sh;
+		Elf_Data	*data;
+		size_t		i;
+
+		if (gelf_getshdr(scn, &sh) == NULL ||
+		    (sh.sh_type != SHT_SYMTAB && sh.sh_type != SHT_DYNSYM) ||
+		    sh.sh_entsize == 0 || (data = elf_getdata(scn, NULL)) == NULL)
+			continue;
+
+		for (i = 0; i < sh.sh_size / sh.sh_entsize; i++) {
+			GElf_Sym	sym;
+			GElf_Shdr	fsh;
+			Elf_Scn		*fscn;
+			const char	*fun;
+			uint64_t	off;
+
+			if (gelf_getsym(data, i, &sym) == NULL ||
+			    GELF_ST_TYPE(sym.st_info) != STT_FUNC ||
+			    sym.st_shndx == SHN_UNDEF ||
+			    sym.st_shndx >= SHN_LORESERVE)
+				continue;
+
+			fun = elf_strptr(dmp->dm_elf, sh.sh_link, sym.st_name);
+			if (fun == NULL || *fun == '\0' ||
+			    !dt_gmatch(fun, pdp->fun))
+				continue;
+
+			/* perf uprobes take file offsets, not virtual addresses. */
+			fscn = elf_getscn(dmp->dm_elf, sym.st_shndx);
+			if (fscn == NULL || gelf_getshdr(fscn, &fsh) == NULL ||
+			    !(fsh.sh_flags & SHF_EXECINSTR) ||
+			    fsh.sh_type == SHT_NOBITS || sym.st_value < fsh.sh_addr ||
+			    sym.st_value - fsh.sh_addr >= fsh.sh_size)
+				continue;
+			off = sym.st_value - fsh.sh_addr + fsh.sh_offset;
+
+			if (flags & PROVIDE_ENTRY)
+				n += provide_uprobe(dtp, prv, dmp, fun, off, 0);
+			if (flags & PROVIDE_RETURN)
+				n += provide_uprobe(dtp, prv, dmp, fun, off,
+						    PP_IS_RETURN);
+		}
+	}
+
+	return n;
+}
+
+typedef struct provide_module_arg {
+	dt_provider_t		*prv;
+	const dtrace_probedesc_t	*pdp;
+	int			flags;
+	int			n;
+} provide_module_arg_t;
+
+static int provide_module_cb(dtrace_hdl_t *dtp, dt_module_t *dmp, void *arg)
+{
+	provide_module_arg_t	*data = arg;
+
+	data->n += provide_module(dtp, data->prv, dmp, data->pdp, data->flags);
+	return 0;
+}
+
+static int provide(dtrace_hdl_t *dtp, const dtrace_probedesc_t *pdp)
+{
+	dt_provider_t	*prv = dt_provider_lookup(dtp, pdp->prv);
+	dt_module_t	*dmp;
+	provide_module_arg_t arg = { .prv = prv, .pdp = pdp };
+
+	if (prv == NULL)
+		return 0;
+
+	/* Disallow uprobe probe specifications with empty module component. */
+	if (pdp->mod && pdp->mod[0] == 0)
+		return 0;
+
+	if (dt_gmatch("entry", pdp->prb))
+		arg.flags |= PROVIDE_ENTRY;
+	if (dt_gmatch("return", pdp->prb))
+		arg.flags |= PROVIDE_RETURN;
+	if (arg.flags == 0)
+		return 0;
+
+	if (pdp->mod[0] != '\0' && !strisglob(pdp->mod)) {
+		dmp = dt_module_lookup_by_name(dtp, pdp->mod);
+		if (dmp == NULL)
+			dmp = dt_module_create_user(dtp, pdp->mod);
+		if (dmp == NULL)
+			return 0;
+
+		return provide_module(dtp, prv, dmp, pdp, arg.flags);
+	}
+
+	dt_module_user_iter(dtp, pdp->mod, provide_module_cb, &arg);
+
+	return arg.n;
 }
 
 static void free_probe_list(dtrace_hdl_t *dtp, list_probe_t *elem)
@@ -1390,6 +1546,16 @@ static int trampoline(dt_pcb_t *pcb, uint_t exitlbl)
 	 */
 	dt_cg_tramp_copy_regs(pcb);
 
+	if (!dt_list_empty(&uprp->stmts)) {
+		/* Populate probe arguments.  */
+		if (upp->flags & PP_IS_RETURN)
+			dt_cg_tramp_copy_rval_from_regs(pcb);
+		else
+			dt_cg_tramp_copy_args_from_regs(pcb, 1);
+
+		dt_cg_tramp_call_clauses(pcb, uprp, DT_ACTIVITY_ACTIVE);
+	}
+
 	/*
 	 * pid probes.
 	 *
@@ -1542,7 +1708,8 @@ static int uprobe_create(dtrace_hdl_t *dtp, const dt_uprobe_t *upp,
 	attr.uprobe_path = (uint64_t)upp->fn;
 	attr.probe_offset = upp->off;
 
-	return dt_perf_event_open(&attr, upp->pid, -1, -1, 0);
+	return dt_perf_event_open(&attr, upp->pid, upp->pid == -1 ? 0 : -1,
+				  -1, 0);
 }
 
 static int attach(dtrace_hdl_t *dtp, const dt_probe_t *uprp, int bpf_fd)
@@ -1720,6 +1887,7 @@ dt_provimpl_t	dt_uprobe = {
 	.name		= prvname,
 	.prog_type	= BPF_PROG_TYPE_KPROBE,
 	.populate	= &populate,
+	.provide	= &provide,
 	.load_prog	= &dt_bpf_prog_load,
 	.trampoline	= &trampoline,
 	.attach		= &attach,
