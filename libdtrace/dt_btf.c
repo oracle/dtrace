@@ -100,8 +100,14 @@ static btf_type_t *
 dt_btf_real_type_by_id(const dt_btf_t *btf, int32_t id)
 {
 	btf_type_t	*type = dt_btf_type_by_id(btf, id);
+	uint64_t	remaining = 1 + (uint64_t)btf->type_cnt;
 
-	while (type != NULL) {
+	if (btf->parent != NULL)
+		remaining += btf->parent->type_cnt;
+
+	/* A longer chain must revisit a type, so reject cyclic BTF references. */
+	while (type != NULL && remaining > 0) {
+		remaining--;
 		switch (BTF_INFO_KIND(type->info)) {
 		case BTF_KIND_CONST:
 		case BTF_KIND_FUNC:
