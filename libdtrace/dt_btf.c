@@ -1069,8 +1069,6 @@ dt_btf_func_is_traceable(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
 		case BTF_KIND_STRUCT:
 		case BTF_KIND_UNION:
 			return 0;
-		default:
-			/* fall-through */
 		}
 	}
 
@@ -1097,8 +1095,6 @@ dt_btf_func_is_traceable(dtrace_hdl_t *dtp, const dt_btf_t *btf, uint32_t id)
 			case BTF_KIND_UNION:
 				if (type->size > 16)	/* value size > 16 */
 					return 0;
-			default:
-				/* fall-through */
 			}
 		}
 	}
