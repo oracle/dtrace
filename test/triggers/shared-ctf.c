@@ -189,6 +189,11 @@ check_source(const char *ctfpath, const char *btfpath, int archived,
 		kernel_btf = kernel->dm_btf;
 		CHECK(dt_module_lookup_by_ctf(dtp, ti.dtt_ctfp) == kernel);
 		CHECK(ctf_parent_dict(ti.dtt_ctfp) == parent);
+		if (!archived) {
+			CHECK(dtrace_lookup_by_type(dtp, "vmlinux",
+			    "const struct shared_test **", &ti) == 0);
+			CHECK(ctf_type_kind(ti.dtt_ctfp, ti.dtt_type) == CTF_K_POINTER);
+		}
 
 		if (archived) {
 			CHECK(dtrace_lookup_by_type(dtp, "vmlinux", "module_test_int", &ti) == 0);

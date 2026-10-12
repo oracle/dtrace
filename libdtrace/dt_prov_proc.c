@@ -148,7 +148,7 @@ static int trampoline(dt_pcb_t *pcb, uint_t exitlbl)
 
 		if (!cfp)
 			longjmp(yypcb->pcb_jmpbuf, EDT_NOCTF);
-		type = ctf_lookup_by_name(cfp, "struct task_struct");
+		type = dt_ctf_lookup_by_name(dtp, cfp, "struct task_struct");
 		if (type == CTF_ERR) {
 			dtp->dt_ctferr = ctf_errno(cfp);
 			longjmp(yypcb->pcb_jmpbuf, EDT_CTF);

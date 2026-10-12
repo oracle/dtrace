@@ -25,7 +25,7 @@ EXTERNAL_TRIGGERS = $(EXTERNAL_64BIT_TRIGGERS) $(if $(NATIVE_BITNESS_ONLY),,$(EX
 INTERNAL_64BIT_TRIGGERS = libproc-pldd libproc-consistency libproc-sleeper \
     libproc-sleeper-pie libproc-dlmadopen libproc-lookup-by-name \
     libproc-lookup-victim libproc-execing-bkpts libproc-execing-bkpts-victim \
-    btf-cyclic-types shared-ctf module-discovery
+    btf-cyclic-types btf-lazy-types shared-ctf module-discovery
 INTERNAL_32BIT_TRIGGERS := libproc-sleeper-32 libproc-sleeper-pie-32
 INTERNAL_TRIGGERS = $(INTERNAL_64BIT_TRIGGERS) $(if $(NATIVE_BITNESS_ONLY),,$(INTERNAL_32BIT_TRIGGERS))
 
@@ -131,6 +131,12 @@ visible-constructor-32_LDFLAGS := -s
 btf-cyclic-types_CFLAGS := -I. -Ilibdtrace -Ilibproc -Ilibcommon \
     -ffunction-sections -fdata-sections -Wno-pedantic
 btf-cyclic-types_LDFLAGS := -Wl,--gc-sections
+
+btf-lazy-types_CFLAGS := $(btf-cyclic-types_CFLAGS)
+btf-lazy-types_LDFLAGS := -Wl,--gc-sections
+btf-lazy-types_DEPS := build-libdtrace.a build-libproc.a libcommon.a libport.a
+btf-lazy-types_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a \
+    $(objdir)/build-libcommon.a $(objdir)/build-libport.a $(libdtrace_LIBS)
 
 # We are using machinery from libproc directly, but libproc calls into
 # nonpublic parts of libdtrace for various shared machinery (dt_list
@@ -263,4 +269,5 @@ module-discovery_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a \
 # Exercise shared dictionary ownership using libdtrace's private module APIs.
 shared-ctf_CFLAGS := -Ilibproc -Ilibdtrace -Ilibcommon -Wno-pedantic
 shared-ctf_DEPS := build-libdtrace.a build-libproc.a libcommon.a libport.a
-shared-ctf_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a $(objdir)/build-libcommon.a $(objdir)/build-libport.a $(libdtrace_LIBS)
+shared-ctf_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a \
+    $(objdir)/build-libcommon.a $(objdir)/build-libport.a $(libdtrace_LIBS)

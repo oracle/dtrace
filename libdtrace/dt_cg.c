@@ -5332,7 +5332,7 @@ dt_cg_uregs(unsigned int idx, dt_node_t *dnp, dt_irlist_t *dlp, dt_regset_t *drp
 			ctf_file_t *cfp = dt_module_shared_ctf(yypcb->pcb_hdl);
 			ctf_id_t type;
 
-			type = ctf_lookup_by_name(cfp, "struct pt_regs");
+			type = dt_ctf_lookup_by_name(dtp, cfp, "struct pt_regs");
 			if (type == CTF_ERR)
 				longjmp(yypcb->pcb_jmpbuf, EDT_NOCTF);
 

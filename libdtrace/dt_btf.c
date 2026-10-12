@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <byteswap.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -36,6 +37,18 @@ struct dt_btf {
 	uint32_t	type_cnt;		/* number of types */
 	btf_type_t	**types;		/* type table */
 	ctf_id_t	*ctfids;		/* matching CTF type ids */
+	uint32_t	*names;			/* name hash bucket heads */
+	uint32_t	*name_next;		/* name hash chains */
+	uint8_t		*ctf_state;		/* conversion state */
+	uint32_t	*ctf_pending;		/* ids visited since snapshot */
+	uint32_t	ctf_pending_cnt;
+};
+
+enum {
+	DT_BTF_CTF_IDLE,
+	DT_BTF_CTF_BUSY,
+	DT_BTF_CTF_SHELL,
+	DT_BTF_CTF_PREPARED
 };
 
 static btf_type_t	btf_void;
@@ -144,6 +157,33 @@ dt_btf_get_string(const dt_btf_t *btf, uint32_t off)
 		return btf->sdata + off;
 
 	return NULL;
+}
+
+/* Index names by BTF kind, preserving the first matching BTF id. */
+static int
+dt_btf_index_names(dtrace_hdl_t *dtp, dt_btf_t *btf)
+{
+	uint32_t i;
+
+	btf->names = dt_calloc(dtp, btf->type_cnt, sizeof(uint32_t));
+	btf->name_next = dt_calloc(dtp, btf->type_cnt, sizeof(uint32_t));
+	if (btf->names == NULL || btf->name_next == NULL)
+		return dt_btf_set_errno(dtp, ENOMEM);
+
+	for (i = btf->type_cnt - 1; i > 0; i--) {
+		btf_type_t *type = btf->types[i];
+		const char *name = dt_btf_get_string(btf, type->name_off);
+		uint32_t slot;
+
+		if (name[0] == '\0')
+			continue;
+		slot = str2hval(name, BTF_INFO_KIND(type->info)) %
+		       btf->type_cnt;
+		btf->name_next[i] = btf->names[slot];
+		btf->names[slot] = i;
+	}
+
+	return 0;
 }
 
 static int
@@ -303,7 +343,7 @@ dt_btf_decode(dtrace_hdl_t *dtp, dt_btf_t *btf)
 	if (ptr != end)
 		return dt_btf_set_errno(dtp, EINVAL);
 
-	return 0;
+	return dt_btf_index_names(dtp, btf);
 }
 
 /*
@@ -459,6 +499,8 @@ dt_btf_load_file(dtrace_hdl_t *dtp, const char *fn, const dt_btf_t *parent)
 
 		dt_free(dtp, btf->data);
 		dt_free(dtp, btf->types);
+		dt_free(dtp, btf->names);
+		dt_free(dtp, btf->name_next);
 		memset(btf, 0, sizeof(*btf));
 		btf->parent = parent;
 	}
@@ -541,6 +583,10 @@ dt_btf_destroy(dtrace_hdl_t *dtp, dt_btf_t *btf)
 	dt_free(dtp, btf->data);
 	dt_free(dtp, btf->types);
 	dt_free(dtp, btf->ctfids);
+	dt_free(dtp, btf->names);
+	dt_free(dtp, btf->name_next);
+	dt_free(dtp, btf->ctf_state);
+	dt_free(dtp, btf->ctf_pending);
 	dt_free(dtp, btf);
 }
 
@@ -559,35 +605,21 @@ dt_ctf_error(dtrace_hdl_t *dtp, ctf_dict_t *ctf)
 	return dt_ctf_set_errno(dtp, ctf_errno(ctf));
 }
 
+static uint32_t dt_btf_lookup_name_kind2(const dt_btf_t *, int32_t,
+					 const char *, uint32_t);
+
+static ctf_id_t dt_btf_add_to_ctf(dtrace_hdl_t *, dt_btf_t *,
+				ctf_dict_t *, uint32_t);
+
 static ctf_id_t
-dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
-		  uint32_t type_id)
+dt_btf_add_type(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
+		uint32_t type_id)
 {
-	const dt_btf_t	*shared_btf = btf->parent;
 	btf_type_t	*type;
 	int		kind, vlen;
 	const char	*name;
 	ctf_id_t	ctfid;
 	ctf_encoding_t	enc;
-
-	/*
-	 * If we already have shared_ctf, we may be looking for a type in that
-	 * shared_ctf.
-	 */
-	if (dt_module_shared_ctf(dtp) && shared_btf != NULL) {
-		if (type_id < shared_btf->type_cnt)
-			return shared_btf->ctfids[type_id];
-
-		if (shared_btf->type_cnt > 0)
-			type_id -= shared_btf->type_cnt - 1;
-	}
-
-	assert(type_id < btf->type_cnt);
-
-	if (btf->ctfids[type_id] != CTF_ERR)
-		return btf->ctfids[type_id];
-
-	assert(type_id > 0);
 
 	type = btf->types[type_id];
 	kind = BTF_INFO_KIND(type->info);
@@ -596,7 +628,7 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 	if (name == NULL)
 		return dt_ctf_set_errno(dtp, ECTF_NAMELEN);
 
-	if (name[0]) {
+	if (name[0] && btf->ctfids[type_id] == CTF_ERR) {
 		char	n[DT_TYPE_NAMELEN];
 
 		/* Do we already have this type? */
@@ -624,7 +656,9 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 			ctfid = ctf_lookup_by_name(ctf, name);
 		}
 
-		if (ctfid != CTF_ERR) {
+		if (ctfid != CTF_ERR &&
+		    !((kind == BTF_KIND_STRUCT || kind == BTF_KIND_UNION) &&
+		      ctf_type_kind(ctf, ctfid) == CTF_K_FORWARD)) {
 			btf->ctfids[type_id] = ctfid;
 			return ctfid;
 		}
@@ -776,20 +810,14 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 		int		i;
 		btf_member_t	*item = (btf_member_t *)(type + 1);
 
-		if (kind == BTF_KIND_STRUCT)
-			ctfid = ctf_add_struct_sized(ctf, CTF_ADD_ROOT, name,
-						     type->size);
-		else
-			ctfid = ctf_add_union_sized(ctf, CTF_ADD_ROOT, name,
-						    type->size);
-
-		btf->ctfids[type_id] = ctfid;
-		if (ctfid == CTF_ERR)
-			return dt_ctf_error(dtp, ctf);
+		/* The preparation pass reserved this aggregate's type id. */
+		ctfid = btf->ctfids[type_id];
+		assert(ctfid != CTF_ERR);
 
 		for (i = 0; i < vlen; i++, item++) {
 			int		err;
 			ctf_id_t	mbid;
+			uint32_t	offset = item->offset;
 			const char	*mname;
 
 			mbid = dt_btf_add_to_ctf(dtp, btf, ctf, item->type);
@@ -803,7 +831,7 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 				enc.cte_format = 0;
 				enc.cte_offset = 0;
 				enc.cte_bits = BTF_MEMBER_BITFIELD_SIZE(item->offset);
-				item->offset = BTF_MEMBER_BIT_OFFSET(item->offset);
+				offset = BTF_MEMBER_BIT_OFFSET(item->offset);
 
 				if (enc.cte_bits > 0) {
 					int	kind;
@@ -831,7 +859,7 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 			}
 
 			err = ctf_add_member_offset(ctf, ctfid, mname, mbid,
-						    item->offset);
+						    offset);
 			if (err == CTF_ERR)
 				return dt_ctf_error(dtp, ctf);
 		}
@@ -850,7 +878,7 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 		if (ctc.ctc_return == CTF_ERR)
 			return CTF_ERR;
 
-		for (i = 0; i < vlen; i++) {
+		for (i = 0; i < vlen; i++, item++) {
 			argv[i] = dt_btf_add_to_ctf(dtp, btf, ctf, item->type);
 			if (argv[i] == CTF_ERR)
 				return CTF_ERR;
@@ -902,12 +930,185 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 	assert(0);
 }
 
+/* Resolve shared ids in the shared dictionary, which also grows lazily. */
+static ctf_id_t
+dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
+		  uint32_t type_id)
+{
+	const dt_btf_t *parent = btf->parent;
+	ctf_id_t id;
+
+	if (parent != NULL && dt_module_shared_ctf(dtp) != NULL) {
+		if (type_id < parent->type_cnt)
+			return dt_btf_add_to_ctf(dtp, (dt_btf_t *)parent,
+					       dt_module_shared_ctf(dtp), type_id);
+		if (parent->type_cnt > 0)
+			type_id -= parent->type_cnt - 1;
+	}
+
+	if (type_id >= btf->type_cnt && type_id != 0)
+		return dt_ctf_set_errno(dtp, ECTF_BADID);
+	if (btf->ctfids[type_id] != CTF_ERR)
+		return btf->ctfids[type_id];
+	if (btf->ctf_state[type_id] == DT_BTF_CTF_BUSY)
+		return dt_ctf_set_errno(dtp, ECTF_CORRUPT);
+
+	btf->ctf_state[type_id] = DT_BTF_CTF_BUSY;
+	id = dt_btf_add_type(dtp, btf, ctf, type_id);
+	btf->ctf_state[type_id] = DT_BTF_CTF_IDLE;
+	if (id != CTF_ERR)
+		btf->ctfids[type_id] = id;
+	return id;
+}
+
+/*
+ * Reserve aggregate shells before converting references.  Starting at a
+ * typedef or pointer must handle the same recursive graphs as starting at
+ * the struct itself.  The pending list also journals cache changes for
+ * rollback.  SHELL denotes an aggregate whose members still need adding;
+ * PREPARED denotes a visited non-aggregate in this preparation pass.
+ */
+static int
+dt_btf_ctf_prepare(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
+		   uint32_t type_id)
+{
+	const dt_btf_t *parent = btf->parent;
+	btf_type_t *type;
+	uint32_t kind, vlen, i;
+
+	if (parent != NULL && dt_module_shared_ctf(dtp) != NULL) {
+		if (type_id < parent->type_cnt)
+			return dt_btf_ctf_prepare(dtp, (dt_btf_t *)parent,
+						  dt_module_shared_ctf(dtp), type_id);
+		if (parent->type_cnt > 0)
+			type_id -= parent->type_cnt - 1;
+	}
+	if (type_id >= btf->type_cnt && type_id != 0)
+		return dt_ctf_set_errno(dtp, ECTF_BADID);
+	if (btf->ctfids[type_id] != CTF_ERR || btf->ctf_state[type_id])
+		return 0;
+
+	btf->ctf_pending[btf->ctf_pending_cnt++] = type_id;
+	btf->ctf_state[type_id] = DT_BTF_CTF_PREPARED;
+	type = btf->types[type_id];
+	kind = BTF_INFO_KIND(type->info);
+	vlen = BTF_INFO_VLEN(type->info);
+
+	switch (kind) {
+	case BTF_KIND_STRUCT:
+	case BTF_KIND_UNION: {
+		const char *name = dt_btf_get_string(btf, type->name_off);
+		char n[DT_TYPE_NAMELEN];
+		ctf_id_t id = CTF_ERR;
+		btf_member_t *members = (btf_member_t *)(type + 1);
+
+		if (name[0] != '\0') {
+			snprintf(n, sizeof(n), "%s %s",
+				 kind == BTF_KIND_STRUCT ? "struct" : "union",
+				 name);
+			id = ctf_lookup_by_name(ctf, n);
+		}
+		if (id != CTF_ERR && ctf_type_kind(ctf, id) != CTF_K_FORWARD) {
+			btf->ctfids[type_id] = id;
+			return 0;
+		}
+		if (kind == BTF_KIND_STRUCT)
+			id = ctf_add_struct_sized(ctf, CTF_ADD_ROOT, name,
+						  type->size);
+		else
+			id = ctf_add_union_sized(ctf, CTF_ADD_ROOT, name,
+						 type->size);
+		if (id == CTF_ERR)
+			return dt_ctf_error(dtp, ctf);
+		btf->ctfids[type_id] = id;
+		btf->ctf_state[type_id] = DT_BTF_CTF_SHELL;
+		for (i = 0; i < vlen; i++) {
+			if (dt_btf_ctf_prepare(dtp, btf, ctf,
+					       members[i].type) < 0)
+				return -1;
+		}
+		return 0;
+	}
+	case BTF_KIND_FWD: {
+		const char *name = dt_btf_get_string(btf, type->name_off);
+		uint32_t target = dt_btf_lookup_name_kind2(btf, 0, name,
+			BTF_INFO_KFLAG(type->info) ? BTF_KIND_UNION :
+						   BTF_KIND_STRUCT);
+		uint32_t base = parent != NULL && parent->type_cnt > 0 ?
+				parent->type_cnt - 1 : 0;
+
+		/* Prefer a definition before publishing a forward type. */
+		if (target != BTF_TYPE_NONE) {
+			if (dt_btf_ctf_prepare(dtp, btf, ctf,
+					       target + base) < 0)
+				return -1;
+			btf->ctfids[type_id] = btf->ctfids[target];
+		}
+		return 0;
+	}
+	case BTF_KIND_ARRAY: {
+		btf_array_t *array = (btf_array_t *)(type + 1);
+
+		if (dt_btf_ctf_prepare(dtp, btf, ctf, array->index_type) < 0)
+			return -1;
+		return dt_btf_ctf_prepare(dtp, btf, ctf, array->type);
+	}
+	case BTF_KIND_FUNC_PROTO: {
+		btf_param_t *params = (btf_param_t *)(type + 1);
+
+		for (i = 0; i < vlen; i++) {
+			if (dt_btf_ctf_prepare(dtp, btf, ctf,
+					       params[i].type) < 0)
+				return -1;
+		}
+		/* Fall through to prepare the return type. */
+	}
+	case BTF_KIND_PTR:
+	case BTF_KIND_CONST:
+	case BTF_KIND_VOLATILE:
+	case BTF_KIND_RESTRICT:
+	case BTF_KIND_TYPEDEF:
+	case BTF_KIND_TYPE_TAG:
+		return dt_btf_ctf_prepare(dtp, btf, ctf, type->type);
+	default:
+		return 0;
+	}
+}
+
+static int
+dt_btf_ctf_finish(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf)
+{
+	uint32_t i;
+
+	for (i = 0; i < btf->ctf_pending_cnt; i++) {
+		uint32_t id = btf->ctf_pending[i];
+
+		if (btf->ctf_state[id] == DT_BTF_CTF_SHELL &&
+		    dt_btf_add_type(dtp, btf, ctf, id) == CTF_ERR)
+			return -1;
+		btf->ctf_state[id] = DT_BTF_CTF_IDLE;
+	}
+	return 0;
+}
+
 static ctf_dict_t *
 dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 {
-	int		i, base = 0;
+	uint32_t	i, count;
 	ctf_dict_t	*ctf;
 	ctf_encoding_t	enc = { CTF_INT_SIGNED, 0, 0 };
+
+	/*
+	 * Split BTF requires the parent's BTF-to-CTF id mapping.  When shared
+	 * CTF comes from an archive, the parent BTF is not converted and its
+	 * ids cannot be used in that dictionary.  Leave the module to the
+	 * normal CTF fallback rather than mixing the two type sources.
+	 */
+	if (dmp != NULL && btf != NULL && btf->parent != NULL &&
+	    btf->parent->ctfids == NULL) {
+		dt_ctf_set_errno(dtp, ECTF_NOTSUP);
+		return NULL;
+	}
 
 	ctf = ctf_create(&dtp->dt_ctferr);
 	if (ctf == NULL)
@@ -926,8 +1127,7 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 		if (err == CTF_ERR ||
 		    ctf_parent_name_set(ctf, "shared_ctf") == CTF_ERR) {
 			dt_ctf_error(dtp, ctf);
-			ctf_close(ctf);
-			return NULL;
+			goto fail;
 		}
 
 		ctf_setspecific(ctf, dmp);
@@ -946,8 +1146,16 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 	if (!dmp && !btf->type_cnt)
 		btf->type_cnt = 1;
 
-	btf->ctfids = dt_calloc(dtp, btf->type_cnt, sizeof(ctf_id_t));
-	for (i = 1; i < btf->type_cnt; i++)
+	count = btf->type_cnt ? btf->type_cnt : 1;
+	btf->ctfids = dt_calloc(dtp, count, sizeof(ctf_id_t));
+	btf->ctf_state = dt_calloc(dtp, count, sizeof(uint8_t));
+	btf->ctf_pending = dt_calloc(dtp, count, sizeof(uint32_t));
+	if (btf->ctfids == NULL || btf->ctf_state == NULL ||
+	    btf->ctf_pending == NULL) {
+		dt_set_errno(dtp, EDT_NOMEM);
+		goto fail;
+	}
+	for (i = 0; i < count; i++)
 		btf->ctfids[i] = CTF_ERR;
 
 	/*
@@ -958,39 +1166,29 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 		btf->ctfids[0] = ctf_add_integer(ctf, CTF_ADD_ROOT, "void",
 						 &enc);
 		if (btf->ctfids[0] == CTF_ERR)
-			dt_dprintf("Could not create 'void' CTF entry.\n");
-	} else {
-		/*
-		 * Any module other than 'vmlinux' inherits the types from
-		 * 'vmlinux'.
-		 * Shared types are 1 through btf->parent->type_cnt - 1
-		 * (base).
-		 * A module's types are base through base + btf->type_cnt - 1,
-		 * but the types are stored in the BTF types array with indexes
-		 * 1 through btf->type_cnt - 1.
-		 */
-		if (btf->parent != NULL && btf->parent->type_cnt > 0)
-			base = btf->parent->type_cnt - 1;
-	}
-
-	for (i = 1; i < btf->type_cnt; i++) {
-		int	type_id = i + base;
-
-		if (dt_btf_add_to_ctf(dtp, btf, ctf, type_id) == CTF_ERR) {
-			dt_dprintf("BTF-to-CTF error: %s\n",
-				   ctf_errmsg(dtp->dt_ctferr));
-			break;
-		}
-	}
+			goto fail;
+	} else
+		btf->ctfids[0] = dtp->dt_exec->dm_btf->ctfids[0];
 
 out:
 	if (ctf_update(ctf) == CTF_ERR) {
 		dt_ctf_error(dtp, ctf);
-		ctf_close(ctf);
-		return NULL;
+		goto fail;
 	}
 
 	return ctf;
+
+fail:
+	ctf_close(ctf);
+	if (btf != NULL) {
+		dt_free(dtp, btf->ctfids);
+		dt_free(dtp, btf->ctf_state);
+		dt_free(dtp, btf->ctf_pending);
+		btf->ctfids = NULL;
+		btf->ctf_state = NULL;
+		btf->ctf_pending = NULL;
+	}
+	return NULL;
 }
 #endif
 
@@ -1025,7 +1223,7 @@ dt_btf_module_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		shared->dm_flags |= DT_DM_LOADED;
 	}
 
-	ctf = dt_btf_to_ctf(dtp, dmp, btf);
+	ctf = dt_btf_to_ctf(dtp, dmp, dmp == dtp->dt_exec ? NULL : btf);
 
 	dt_dprintf("Generated %s CTF from BTF (%d types).\n", dmp->dm_name,
 		   btf->type_cnt);
@@ -1040,22 +1238,208 @@ dt_btf_lookup_name_kind2(const dt_btf_t *btf, int32_t base, const char *name,
 {
 	uint32_t	i;
 
-	/* Look through the type data for a match. */
-	for (i = 1; i < btf->type_cnt; i++) {
-		const btf_type_t	*type = btf->types[i];
-		const char		*str;
+	if (btf->names == NULL || btf->type_cnt == 0)
+		return BTF_TYPE_NONE;
+
+	i = btf->names[str2hval(name, kind) % btf->type_cnt];
+	for (; i != 0; i = btf->name_next[i]) {
+		const btf_type_t *type = btf->types[i];
+		const char *str;
 
 		if (BTF_INFO_KIND(type->info) != kind)
 			continue;
-
 		str = dt_btf_get_string(btf, type->name_off);
-		if (str == NULL)
-			continue;
 		if (strcmp(name, str) == 0)
 			return i + base;
 	}
 
 	return BTF_TYPE_NONE;
+}
+
+#ifdef HAVE_LIBCTF
+/* Find a CTF-visible name without converting unrelated BTF types. */
+static uint32_t
+dt_btf_named_type(const dt_btf_t *btf, const char *name)
+{
+	uint32_t id, kind, base = 0;
+	const char *tag = name;
+
+	if (btf->parent != NULL) {
+		id = dt_btf_named_type(btf->parent, name);
+		if (id != BTF_TYPE_NONE)
+			return id;
+		if (btf->parent->type_cnt > 0)
+			base = btf->parent->type_cnt - 1;
+	}
+
+	if (strncmp(name, "struct ", 7) == 0) {
+		kind = BTF_KIND_STRUCT;
+		tag += 7;
+	} else if (strncmp(name, "union ", 6) == 0) {
+		kind = BTF_KIND_UNION;
+		tag += 6;
+	} else if (strncmp(name, "enum ", 5) == 0) {
+		kind = BTF_KIND_ENUM;
+		tag += 5;
+	} else {
+		static const uint32_t kinds[] = {
+			BTF_KIND_INT, BTF_KIND_FLOAT, BTF_KIND_TYPEDEF
+		};
+		size_t i;
+
+		for (i = 0; i < sizeof(kinds) / sizeof(kinds[0]); i++) {
+			id = dt_btf_lookup_name_kind2(btf, base, name,
+						    kinds[i]);
+			if (id != BTF_TYPE_NONE)
+				return id;
+		}
+		return BTF_TYPE_NONE;
+	}
+
+	id = dt_btf_lookup_name_kind2(btf, base, tag, kind);
+	if (id != BTF_TYPE_NONE || kind == BTF_KIND_ENUM)
+		return id;
+
+	id = dt_btf_lookup_name_kind2(btf, base, tag, BTF_KIND_FWD);
+	if (id != BTF_TYPE_NONE) {
+		const btf_type_t *type = dt_btf_type_by_id(btf, id);
+
+		if (!!BTF_INFO_KFLAG(type->info) != (kind == BTF_KIND_UNION))
+			return BTF_TYPE_NONE;
+	}
+	return id;
+}
+
+/* Discard the cache entries belonging to a failed conversion transaction. */
+static void
+dt_btf_ctf_abort(dt_btf_t *btf, ctf_dict_t *ctf, ctf_snapshot_id_t snap)
+{
+	ctf_rollback(ctf, snap);
+	while (btf->ctf_pending_cnt > 0) {
+		uint32_t id = btf->ctf_pending[--btf->ctf_pending_cnt];
+
+		btf->ctfids[id] = CTF_ERR;
+		btf->ctf_state[id] = DT_BTF_CTF_IDLE;
+	}
+}
+#endif
+
+/*
+ * All CTF name lookups that can reach kernel BTF go through this helper.
+ * Existing CTF dictionaries still use libctf's normal lookup behavior.
+ */
+ctf_id_t
+dt_ctf_lookup_by_name(dtrace_hdl_t *dtp, ctf_file_t *ctf, const char *name)
+{
+#ifdef HAVE_LIBCTF
+	dt_module_t *dmp;
+	dt_btf_t *btf = NULL, *parent;
+	ctf_snapshot_id_t snap, psnap;
+	ctf_id_t id;
+	uint32_t bid;
+	char base[DT_TYPE_NAMELEN];
+	const char *p = name;
+	size_t len = 0;
+	unsigned int pointers = 0;
+
+	/* vmlinux imports shared types; convert them in the owning parent. */
+	if (dtp->dt_exec != NULL && ctf == dtp->dt_exec->dm_ctfp &&
+	    !(dtp->dt_exec->dm_flags & DT_DM_CTF_ARCHIVED) &&
+	    ctf_parent_dict(ctf) == dt_module_shared_ctf(dtp))
+		return dt_ctf_lookup_by_name(dtp, dt_module_shared_ctf(dtp),
+					     name);
+
+	if (ctf == dt_module_shared_ctf(dtp) && dtp->dt_exec != NULL)
+		btf = dtp->dt_exec->dm_btf;
+	else if ((dmp = ctf_getspecific(ctf)) != NULL &&
+		 dmp->dm_ctfp == ctf && !(dmp->dm_flags & DT_DM_CTF_ARCHIVED))
+		btf = dmp->dm_btf;
+
+	if (btf == NULL || btf->ctfids == NULL)
+		return ctf_lookup_by_name(ctf, name);
+
+	id = ctf_lookup_by_name(ctf, name);
+	if (id != CTF_ERR && ctf_type_kind(ctf, id) != CTF_K_FORWARD)
+		return id;
+
+	/* Extract the named base of libctf's qualified/pointer type syntax. */
+	while (*p != '\0') {
+		const char *word;
+		size_t n;
+
+		if (isspace((unsigned char)*p)) {
+			p++;
+			continue;
+		}
+		if (*p == '*') {
+			pointers++;
+			p++;
+			continue;
+		}
+		word = p;
+		while (*p != '\0' && !isspace((unsigned char)*p) && *p != '*')
+			p++;
+		n = p - word;
+		if ((n == 5 && strncmp(word, "const", n) == 0) ||
+		    (n == 8 && strncmp(word, "volatile", n) == 0) ||
+		    (n == 8 && strncmp(word, "restrict", n) == 0))
+			continue;
+		if (len + n + 1 >= sizeof(base))
+			return ctf_lookup_by_name(ctf, name);
+		if (len != 0)
+			base[len++] = ' ';
+		memcpy(base + len, word, n);
+		len += n;
+	}
+	base[len] = '\0';
+
+	bid = dt_btf_named_type(btf, base);
+	if (bid == BTF_TYPE_NONE)
+		return ctf_lookup_by_name(ctf, name);
+
+	parent = (dt_btf_t *)btf->parent;
+	snap = ctf_snapshot(ctf);
+	if (parent != NULL)
+		psnap = ctf_snapshot(dt_module_shared_ctf(dtp));
+
+	if (dt_btf_ctf_prepare(dtp, btf, ctf, bid) < 0)
+		goto fail;
+	id = dt_btf_add_to_ctf(dtp, btf, ctf, bid);
+	if (id == CTF_ERR)
+		goto fail;
+
+	if (parent != NULL &&
+	    dt_btf_ctf_finish(dtp, parent, dt_module_shared_ctf(dtp)) < 0)
+		goto fail;
+	if (dt_btf_ctf_finish(dtp, btf, ctf) < 0)
+		goto fail;
+
+	/* A pointer spelling may be requested before any BTF pointer to it. */
+	while (pointers-- > 0) {
+		ctf_id_t pointer = ctf_type_pointer(ctf, id);
+
+		if (pointer == CTF_ERR)
+			pointer = ctf_add_pointer(ctf, CTF_ADD_ROOT, id);
+		id = pointer;
+		if (id == CTF_ERR) {
+			dt_ctf_error(dtp, ctf);
+			goto fail;
+		}
+	}
+
+	btf->ctf_pending_cnt = 0;
+	if (parent != NULL)
+		parent->ctf_pending_cnt = 0;
+	return ctf_lookup_by_name(ctf, name);
+
+fail:
+	dt_btf_ctf_abort(btf, ctf, snap);
+	if (parent != NULL)
+		dt_btf_ctf_abort(parent, dt_module_shared_ctf(dtp), psnap);
+	return CTF_ERR;
+#else
+	return ctf_lookup_by_name(ctf, name);
+#endif
 }
 
 uint32_t

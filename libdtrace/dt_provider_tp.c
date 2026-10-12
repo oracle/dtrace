@@ -327,7 +327,7 @@ dt_tp_event_info(dtrace_hdl_t *dtp, FILE *f, dt_valid_arg_f *valid_arg,
 				ctf_id_t	type;
 				size_t		esize = 1;
 
-				type = ctf_lookup_by_name(ctfp, p);
+				type = dt_ctf_lookup_by_name(dtp, ctfp, p);
 				if (type != CTF_ERR)
 					esize = ctf_type_size(ctfp, type);
 				if (esize != 0)
