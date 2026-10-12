@@ -1093,7 +1093,8 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 				if (!cfp)
 					return dt_set_errno(dtp, EDT_NOCTF);
 
-				type = ctf_lookup_by_name(cfp, "struct task_struct");
+				type = dt_ctf_lookup_by_name(dtp, cfp,
+						     "struct task_struct");
 				if (type == CTF_ERR)
 					goto err_ctf;
 
@@ -1129,7 +1130,8 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 				if (!cfp)
 					return dt_set_errno(dtp, EDT_NOCTF);
 
-				type = ctf_lookup_by_name(cfp, "struct mm_struct");
+				type = dt_ctf_lookup_by_name(dtp, cfp,
+						     "struct mm_struct");
 				if (type == CTF_ERR)
 					goto err_ctf;
 
@@ -1155,7 +1157,8 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 				if (!cfp)
 					return dt_set_errno(dtp, EDT_NOCTF);
 
-				type = ctf_lookup_by_name(cfp, "struct mutex");
+				type = dt_ctf_lookup_by_name(dtp, cfp,
+						     "struct mutex");
 				if (type == CTF_ERR)
 					goto err_ctf;
 
@@ -1185,7 +1188,8 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 				if (!cfp)
 					return dt_set_errno(dtp, EDT_NOCTF);
 
-				type = ctf_lookup_by_name(cfp, "rwlock_t");
+				type = dt_ctf_lookup_by_name(dtp, cfp,
+						     "rwlock_t");
 				if (type == CTF_ERR)
 					goto err_ctf;
 				rc = ctf_member_info(cfp, type, "raw_lock", &ctm);
@@ -1193,7 +1197,8 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 					goto err_ctf;
 				total_offset = ctm.ctm_offset / NBBY;
 
-				type = ctf_lookup_by_name(cfp, "arch_rwlock_t");
+				type = dt_ctf_lookup_by_name(dtp, cfp,
+						     "arch_rwlock_t");
 				if (type == CTF_ERR)
 					goto err_ctf;
 				rc = ctf_member_info(cfp, type, "cnts", &ctm);

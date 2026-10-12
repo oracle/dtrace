@@ -2390,7 +2390,8 @@ dtrace_lookup_by_type(dtrace_hdl_t *dtp, const char *object, const char *name,
 		 * 'tip' and keep going in the hope that we will locate the
 		 * underlying structure definition.  Otherwise just return.
 		 */
-		if ((id = ctf_lookup_by_name(dmp->dm_ctfp, name)) != CTF_ERR) {
+		if ((id = dt_ctf_lookup_by_name(dtp, dmp->dm_ctfp,
+					      name)) != CTF_ERR) {
 			tip->dtt_object = dmp->dm_name;
 			tip->dtt_ctfp = dmp->dm_ctfp;
 			tip->dtt_type = id;
@@ -2479,7 +2480,8 @@ dtrace_symbol_type(dtrace_hdl_t *dtp, const GElf_Sym *symp,
 		tip->dtt_type = idp->di_type;
 	} else if (dmp->dm_flags & DT_DM_KERNEL) {
 		tip->dtt_ctfp = dmp->dm_ctfp;
-		tip->dtt_type = ctf_lookup_by_name(dmp->dm_ctfp, "uintptr_t");
+		tip->dtt_type = dt_ctf_lookup_by_name(dtp, dmp->dm_ctfp,
+						   "uintptr_t");
 
 		if (tip->dtt_type == CTF_ERR)
 			return dt_set_errno(dtp, EDT_NOSYM);

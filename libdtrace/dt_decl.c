@@ -935,7 +935,7 @@ dt_decl_type(dt_decl_t *ddp, dtrace_typeinfo_t *tip)
 		 * to "long" for all array types that we create on-the-fly.
 		 */
 		r.ctr_contents = tip->dtt_type;
-		r.ctr_index = ctf_lookup_by_name(tip->dtt_ctfp, "long");
+		r.ctr_index = dt_ctf_lookup_by_name(dtp, tip->dtt_ctfp, "long");
 		r.ctr_nelems = ddp->dd_node ?
 		    (uint_t)ddp->dd_node->dn_value : 0;
 
