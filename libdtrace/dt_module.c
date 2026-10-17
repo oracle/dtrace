@@ -1329,16 +1329,28 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		if (dtp->dt_ctfa_path == NULL) {
 			ctfa_name = malloc(strlen(dtp->dt_module_path) +
 			    strlen("/kernel/vmlinux.ctfa") + 1);
+			if (ctfa_name == NULL) {
+				dt_set_errno(dtp, EDT_NOMEM);
+				return;
+			}
 			to = stpcpy(ctfa_name, dtp->dt_module_path);
 			stpcpy(to, "/kernel/vmlinux.ctfa");
 		} else
 			ctfa_name = dtp->dt_ctfa_path;
 
+		/* Cache absence, but retry allocation, permission, and I/O errors. */
+		if (dtp->dt_ctfa_missing)
+			dtp->dt_ctferr = dtp->dt_ctfa_missing;
+		else {
 #ifdef HAVE_LIBCTF
-		dtp->dt_ctfa = dt_ctfa_open(dtp, ctfa_name);
+			dtp->dt_ctfa = dt_ctfa_open(dtp, ctfa_name);
 #else
-		dtp->dt_ctfa = ctf_arc_open(ctfa_name, &dtp->dt_ctferr);
+			dtp->dt_ctfa = ctf_arc_open(ctfa_name, &dtp->dt_ctferr);
 #endif
+			if (dtp->dt_ctfa == NULL &&
+			    (dtp->dt_ctferr == ENOENT || dtp->dt_ctferr == ENOTDIR))
+				dtp->dt_ctfa_missing = dtp->dt_ctferr;
+		}
 		if (dtp->dt_ctfa != NULL) {
 			/*
 			 * Load in the shared CTF immediately.

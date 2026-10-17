@@ -4,6 +4,8 @@
  * http://oss.oracle.com/licenses/upl.
  */
 
+#include <errno.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +13,34 @@
 #include <linux/btf.h>
 #include <dt_module.h>
 #include <dt_kernel_module.h>
+
+static const char *watched_archive;
+static int archive_opens, archive_io_error;
+
+extern int __real_open64(const char *, int, ...);
+
+int
+__wrap_open64(const char *path, int flags, ...)
+{
+	mode_t mode = 0;
+
+	if (flags & O_CREAT) {
+		va_list ap;
+
+		va_start(ap, flags);
+		mode = va_arg(ap, int);
+		va_end(ap);
+	}
+	if (watched_archive && strcmp(path, watched_archive) == 0) {
+		archive_opens++;
+		if (archive_io_error) {
+			archive_io_error = 0;
+			errno = EIO;
+			return -1;
+		}
+	}
+	return __real_open64(path, flags, mode);
+}
 
 #ifdef HAVE_LIBCTF
 #define CHECK(expr) do { \
@@ -227,7 +257,26 @@ check_embedded(const char *missing, const char *embedded)
 	dtp->dt_kernpaths = NULL;
 	CHECK(dt_kern_path_create(dtp, strdup("shared_ctf_test"), strdup(missing)) != NULL);
 	CHECK((shared = dt_module_create(dtp, "shared_ctf")) != NULL);
+	/* Transient errors retry; confirmed absence is cached until a path changes. */
+	watched_archive = missing;
+	archive_opens = 0;
+	archive_io_error = 1;
 	CHECK(dt_module_getctf(dtp, shared) == NULL);
+	CHECK(archive_opens == 1);
+	CHECK(dt_module_getctf(dtp, shared) == NULL);
+	CHECK(archive_opens == 2);
+	CHECK(dt_module_getctf(dtp, shared) == NULL);
+	CHECK(archive_opens == 2);
+	CHECK(dtrace_setopt(dtp, "ctfpath", missing) == 0);
+	CHECK(dt_module_getctf(dtp, shared) == NULL);
+	CHECK(archive_opens == 3);
+	CHECK(dtrace_setopt(dtp, "btfpath", "none") == 0);
+	CHECK(dt_module_getctf(dtp, shared) == NULL);
+	CHECK(archive_opens == 4);
+	CHECK(dtrace_setopt(dtp, "modpath", dtp->dt_module_path) == 0);
+	CHECK(dt_module_getctf(dtp, shared) == NULL);
+	CHECK(archive_opens == 5);
+	watched_archive = NULL;
 	CHECK(dtrace_errno(dtp) == EDT_NOCTF);
 	CHECK(dt_module_shared_ctf(dtp) == NULL);
 

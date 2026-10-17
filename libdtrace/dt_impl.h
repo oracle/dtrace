@@ -310,6 +310,7 @@ struct dtrace_hdl {
 	dt_list_t dt_modlist;	/* linked list of dt_module_t's */
 	dt_htab_t *dt_mods;	/* hash table of dt_module_t's */
 	dt_htab_t *dt_kernsyms; /* htab of kernel symbol names */
+	int dt_ctfa_missing;	/* cached ENOENT/ENOTDIR for the archive */
 	char *dt_ctfa_path;	/* path to vmlinux.ctfa */
 	ctf_archive_t *dt_ctfa; /* ctf archive for the entire kernel tree */
 	void *dt_ctfa_data;	/* backing data for dt_ctfa */

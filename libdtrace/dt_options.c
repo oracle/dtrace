@@ -320,6 +320,7 @@ dt_opt_btf_path(dtrace_hdl_t *dtp, const char *arg, uintptr_t option)
 
 	free(dtp->dt_btf_path);
 	dtp->dt_btf_path = btf;
+	dtp->dt_ctfa_missing = 0;
 
 	return 0;
 }
@@ -340,6 +341,7 @@ dt_opt_ctfa_path(dtrace_hdl_t *dtp, const char *arg, uintptr_t option)
 
 	free(dtp->dt_ctfa_path);
 	dtp->dt_ctfa_path = ctfa;
+	dtp->dt_ctfa_missing = 0;
 
 	return 0;
 }
@@ -425,6 +427,7 @@ dt_opt_module_path(dtrace_hdl_t *dtp, const char *arg, uintptr_t option)
 
 	free(dtp->dt_module_path);
 	dtp->dt_module_path = proc;
+	dtp->dt_ctfa_missing = 0;
 
 	return 0;
 }
