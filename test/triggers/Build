@@ -267,6 +267,7 @@ module-discovery_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a \
     $(objdir)/build-libcommon.a $(objdir)/build-libport.a $(libdtrace_LIBS)
 
 # Exercise shared dictionary ownership using libdtrace's private module APIs.
+shared-ctf_LDFLAGS := -Wl,--wrap=open64
 shared-ctf_CFLAGS := -Ilibproc -Ilibdtrace -Ilibcommon -Wno-pedantic
 shared-ctf_DEPS := build-libdtrace.a build-libproc.a libcommon.a libport.a
 shared-ctf_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a \
