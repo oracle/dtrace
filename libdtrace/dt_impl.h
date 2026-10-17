@@ -188,6 +188,13 @@ typedef struct dt_module {
 	uint_t dm_aslen;	/* number of entries in dm_asmap */
 } dt_module_t;
 
+/* Handle-wide address index.  order preserves module-list precedence. */
+typedef struct dt_module_range {
+	GElf_Addr start, last, max_last;
+	dt_module_t *module;
+	size_t order;
+} dt_module_range_t;
+
 /*
  * The path to an actual kernel module residing on the disk.  Used only for
  * initialization of the corresponding dt_module, since modprobe -l is
@@ -308,6 +315,9 @@ struct dtrace_hdl {
 	uint64_t dt_maxframes;	/* system limit on stack traces */
 	dt_tstring_t *dt_tstrings; /* temporary string slots */
 	dt_list_t dt_modlist;	/* linked list of dt_module_t's */
+	dt_module_range_t *dt_modranges; /* sorted module address ranges */
+	size_t dt_modranges_count;
+	int dt_modranges_valid;
 	dt_htab_t *dt_mods;	/* hash table of dt_module_t's */
 	dt_htab_t *dt_kernsyms; /* htab of kernel symbol names */
 	int dt_ctfa_missing;	/* cached ENOENT/ENOTDIR for the archive */

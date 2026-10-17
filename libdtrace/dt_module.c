@@ -239,9 +239,19 @@ dt_module_cmp(const dt_module_t *p, const dt_module_t *q)
 
 DEFINE_HE_STD_LINK_FUNCS(dt_module, dt_module_t, dm_he)
 
+static void
+dt_module_ranges_invalidate(dtrace_hdl_t *dtp)
+{
+	free(dtp->dt_modranges);
+	dtp->dt_modranges = NULL;
+	dtp->dt_modranges_count = 0;
+	dtp->dt_modranges_valid = 0;
+}
+
 static void *
 dt_module_del_mod(dt_module_t *head, dt_module_t *dmp)
 {
+	dt_module_ranges_invalidate(dmp->dm_dtp);
 	head = dt_module_del(head, dmp);
 	dt_list_delete(&dmp->dm_dtp->dt_modlist, dmp);
 
@@ -1724,6 +1734,9 @@ dt_modsym_addsym(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_kallsym_t *sym,
 	dtrace_addr_range_t	*range = NULL;
 	int			skip = 0;
 
+	if (dtp->dt_modranges_valid)
+		dt_module_ranges_invalidate(dtp);
+
 	/*
 	 * Add the symbol to the module's kernel symbol table.
 	 *
@@ -2171,6 +2184,7 @@ dt_module_shuffle_to_start(dtrace_hdl_t *dtp, const char *name)
 
 	dt_list_delete(&dtp->dt_modlist, dmp);
 	dt_list_prepend(&dtp->dt_modlist, dmp);
+	dt_module_ranges_invalidate(dtp);
 }
 
 static dt_module_t *
@@ -2338,6 +2352,118 @@ dtrace_lookup_by_name(dtrace_hdl_t *dtp, const char *object, const char *name,
 	return dt_set_errno(dtp, EDT_NOSYM);
 }
 
+static int
+dt_module_range_cmp(const void *a, const void *b)
+{
+	const dt_module_range_t *p = a, *q = b;
+
+	return p->start < q->start ? -1 : p->start > q->start;
+}
+
+/* Build lazily: handles that never symbolize addresses need no index. */
+static int
+dt_module_ranges_build(dtrace_hdl_t *dtp)
+{
+	dt_module_t *dmp;
+	dt_module_range_t *index;
+	size_t total = 0, n = 0, order = 0, i;
+	GElf_Addr max_last = 0;
+
+	for (dmp = dt_list_next(&dtp->dt_modlist); dmp;
+	     dmp = dt_list_next(dmp)) {
+		if (dmp->dm_text_addrs_size > SIZE_MAX - total)
+			return -1;
+		total += dmp->dm_text_addrs_size;
+		if (dmp->dm_data_addrs_size > SIZE_MAX - total)
+			return -1;
+		total += dmp->dm_data_addrs_size;
+	}
+	if (total > SIZE_MAX / sizeof(*index))
+		return -1;
+	index = total ? malloc(total * sizeof(*index)) : NULL;
+	if (total && index == NULL)
+		return -1;
+
+	for (dmp = dt_list_next(&dtp->dt_modlist); dmp;
+	     dmp = dt_list_next(dmp), order++) {
+		int text;
+
+		for (text = 0; text < 2; text++) {
+			dtrace_addr_range_t *ranges = text ? dmp->dm_text_addrs :
+							   dmp->dm_data_addrs;
+			size_t size = text ? dmp->dm_text_addrs_size :
+					    dmp->dm_data_addrs_size;
+
+			for (i = 0; i < size; i++) {
+				GElf_Addr start = ranges[i].dar_va;
+				GElf_Addr len = ranges[i].dar_size;
+
+				if (len == 0)
+					continue;
+				index[n].start = start;
+				index[n].last = len - 1 > UINT64_MAX - start ?
+						UINT64_MAX : start + len - 1;
+				index[n].module = dmp;
+				index[n++].order = order;
+			}
+		}
+	}
+	if (n)
+		qsort(index, n, sizeof(*index), dt_module_range_cmp);
+	for (i = 0; i < n; i++) {
+		if (index[i].last > max_last)
+			max_last = index[i].last;
+		index[i].max_last = max_last;
+	}
+	dtp->dt_modranges = index;
+	dtp->dt_modranges_count = n;
+	dtp->dt_modranges_valid = 1;
+	return 0;
+}
+
+static dt_module_t *
+dt_module_by_addr(dtrace_hdl_t *dtp, GElf_Addr addr)
+{
+	dt_module_range_t *index;
+	dt_module_t *dmp = NULL;
+	size_t lo = 0, hi, best = SIZE_MAX;
+
+	if (!dtp->dt_modranges_valid && dt_module_ranges_build(dtp) != 0) {
+		/* An optional index must not make a lookup fail under memory pressure. */
+		for (dmp = dt_list_next(&dtp->dt_modlist); dmp;
+		     dmp = dt_list_next(dmp)) {
+			if (bsearch(&addr, dmp->dm_text_addrs, dmp->dm_text_addrs_size,
+				    sizeof(dtrace_addr_range_t), dtrace_addr_range_cmp) ||
+			    bsearch(&addr, dmp->dm_data_addrs, dmp->dm_data_addrs_size,
+				    sizeof(dtrace_addr_range_t), dtrace_addr_range_cmp))
+				return dmp;
+		}
+		return NULL;
+	}
+	index = dtp->dt_modranges;
+	hi = dtp->dt_modranges_count;
+	while (lo < hi) {
+		size_t mid = lo + (hi - lo) / 2;
+
+		if (index[mid].start <= addr)
+			lo = mid + 1;
+		else
+			hi = mid;
+	}
+	/* Prefix maxima bound the backwards search, including overlapping ranges. */
+	while (lo && index[lo - 1].max_last >= addr) {
+		dt_module_range_t *r = &index[--lo];
+
+		if (r->last >= addr && r->order < best) {
+			dmp = r->module;
+			best = r->order;
+			if (best == 0)
+				break;
+		}
+	}
+	return dmp;
+}
+
 /*
  * Exported interface to look up a symbol by address.  We return the (possibly
  * partial) GElf_Sym and complete symbol information for the matching symbol.
@@ -2358,22 +2484,7 @@ dtrace_lookup_by_addr(dtrace_hdl_t *dtp, GElf_Addr addr,
 	if (v != NULL)
 		return v->dtv_lookup_by_addr(dtp->dt_varg, addr, symp, sip);
 
-	for (dmp = dt_list_next(&dtp->dt_modlist); dmp != NULL;
-	    dmp = dt_list_next(dmp)) {
-		void *i;
-
-		i = bsearch(&addr, dmp->dm_text_addrs, dmp->dm_text_addrs_size,
-		    sizeof(struct dtrace_addr_range), dtrace_addr_range_cmp);
-
-		if (i)
-			break;
-
-		i = bsearch(&addr, dmp->dm_data_addrs, dmp->dm_data_addrs_size,
-		    sizeof(struct dtrace_addr_range), dtrace_addr_range_cmp);
-
-		if (i)
-			break;
-	}
+	dmp = dt_module_by_addr(dtp, addr);
 
 	if (dmp == NULL) {
 		dt_dprintf("No module corresponds to %lx\n", addr);
