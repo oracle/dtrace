@@ -1002,7 +1002,7 @@ dt_btf_get_module_ids(dtrace_hdl_t *dtp)
 			return dt_set_errno(dtp, errno);
 
 		dmp = dt_module_lookup_by_name(dtp, name);
-		if (dmp == NULL)
+		if (dmp == NULL || dmp->dm_btf_id != 0)
 			continue;
 
 		dmp->dm_btf_id = id;

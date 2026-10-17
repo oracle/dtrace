@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -480,9 +480,9 @@ extern pid_t dtrace_proc_getpid(dtrace_hdl_t *dtp,
  * information cached for each of the program objects in use by DTrace.  The
  * resulting struct contains pointers to address range arrays and arbitrary-
  * length strings, including object, symbol, and type names, that are persistent
- * until the next call to dtrace_update().  Once dtrace_update() is called, any
- * cached values must be flushed and not used subsequently by the client
- * program.
+ * until dtrace_close().  dtrace_update() discovers additional kernel modules
+ * without invalidating existing metadata.  Kernel module unloading and reloading
+ * are not supported: metadata for the first discovered instance is retained.
  */
 
 #define	DTRACE_OBJ_EXEC	 ((const char *)0L)	/* primary executable file */

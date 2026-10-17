@@ -183,3 +183,13 @@ proc:::signal-discard
 	expiration should be discarded, no signal-discard probe is fired.
 	The reason for this behaviour is that SDT probes do not work in
 	IRQ context.
+
+
+Kernel module metadata lifetime
+--------------------------------
+dtrace_update() discovers new kernel modules and retains previously discovered
+symbols, address ranges, and types, including those for vmlinux.  Returned
+metadata remains valid across updates until dtrace_close().  Dynamic kernel
+module unloading and reloading are not supported: a module name continues to
+refer to its first discovered instance, even if it disappears or reappears at
+a different address.  Open a new handle to obtain a fresh view of the kernel.
