@@ -1604,6 +1604,8 @@ typedef struct dt_kasstate {
 	int		kernel_flag;
 	int		last_sym_text;
 	dt_module_t	*last_dmp;
+	dt_module_t	*lookup_dmp;
+	char		lookup_name[DTRACE_MODNAMELEN];
 } dt_kasstate_t;
 
 static dt_kasstate_t *
@@ -1613,6 +1615,8 @@ dt_kasstate_new(dtrace_hdl_t *dtp, int kind)
 	dt_kasstate_t	*state;
 
 	state = dt_zalloc(dtp, sizeof(dt_kasstate_t));
+	if (state == NULL)
+		return NULL;
 	state->kind = kind;
 	state->kernel_flag = 0;
 	state->last_dmp = NULL;
@@ -1818,6 +1822,87 @@ dt_modsym_addsym(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_kallsym_t *sym,
 	return 0;
 }
 
+/* Parse a hexadecimal field without scanf's general format machinery. */
+static int
+dt_modsym_hex(const char **line, uint64_t *value)
+{
+	const char *p = *line;
+	uint64_t v = 0;
+	int digits = 0;
+
+	while (isspace((unsigned char)*p))
+		p++;
+	for (;;) {
+		unsigned int n;
+
+		if (*p >= '0' && *p <= '9')
+			n = *p - '0';
+		else if (*p >= 'a' && *p <= 'f')
+			n = *p - 'a' + 10;
+		else if (*p >= 'A' && *p <= 'F')
+			n = *p - 'A' + 10;
+		else
+			break;
+		if (v > (UINT64_MAX - n) / 16)
+			return -1;
+		v = v * 16 + n;
+		p++;
+		digits++;
+	}
+	if (!digits || !isspace((unsigned char)*p))
+		return -1;
+	*value = v;
+	*line = p;
+	return 0;
+}
+
+static int
+dt_modsym_parse(const char *line, int kind, dt_kallsym_t *sym)
+{
+	const char *end;
+	uint64_t value;
+	size_t len;
+
+	if (dt_modsym_hex(&line, &value) != 0)
+		return -1;
+	sym->addr = value;
+	sym->size = 1;
+	if (kind == DT_MODSYM_KALLMODSYMS) {
+		if (dt_modsym_hex(&line, &value) != 0 || value > SIZE_MAX)
+			return -1;
+		sym->size = value;
+	}
+	while (isspace((unsigned char)*line))
+		line++;
+	if (*line == '\0')
+		return -1;
+	sym->type = *line++;
+	if (!isspace((unsigned char)*line))
+		return -1;
+	while (isspace((unsigned char)*line))
+		line++;
+	len = strcspn(line, " \t\r\n");
+	if (len == 0 || len >= sizeof(sym->name))
+		return -1;
+	memcpy(sym->name, line, len);
+	sym->name[len] = '\0';
+	line += len;
+	while (isspace((unsigned char)*line))
+		line++;
+	if (*line == '\0') {
+		strcpy(sym->mod, "vmlinux");
+		return 0;
+	}
+	if (*line++ != '[' || (end = strchr(line, ']')) == NULL)
+		return -1;
+	len = end - line;
+	if (len == 0 || len >= sizeof(sym->mod))
+		return -1;
+	memcpy(sym->mod, line, len);
+	sym->mod[len] = '\0';
+	return 1;		/* Explicit module name(s). */
+}
+
 /*
  * Update our module cache.  For each line, create or
  * populate the dt_module_t for this module (if necessary), extend its address
@@ -1835,39 +1920,19 @@ dt_modsym_update(dtrace_hdl_t *dtp, const char *line, dt_kasstate_t *state)
 	if ((line[0] == '\n') || (line[0] == 0))
 		return 0;
 
-	sym.size = 1;
-	strncpy(sym.mod, "vmlinux]", PATH_MAX);
+	{
+		int explicit_module = dt_modsym_parse(line, state->kind, &sym);
 
-	/* Read symbol. */
-	if (state->kind == DT_MODSYM_KALLMODSYMS) {
-		if (sscanf(line, "%llx %llx %c %s [%s",
-		    (long long unsigned *)&sym.addr,
-		    (long long unsigned *)&sym.size,
-		    &sym.type, sym.name, sym.mod) < 4) {
-		    dt_dprintf("malformed /proc/kallmodsyms line: %s\n", line);
-		    return EDT_CORRUPT_KALLSYMS;
-		}
-
-		sym.mod[strlen(sym.mod)-1] = '\0';	/* chop trailing ] */
-	} else {
-		int	matches;
-
-		matches = sscanf(line, "%llx %c %s [%s",
-				 (long long unsigned *)&sym.addr, &sym.type,
-				 sym.name, sym.mod);
-		if (matches < 3) {
-			dt_dprintf("malformed /proc/kallsyms line: %s\n", line);
+		if (explicit_module < 0) {
+			dt_dprintf("malformed kernel symbol line: %s\n", line);
 			return EDT_CORRUPT_KALLSYMS;
 		}
-
-		sym.mod[strlen(sym.mod)-1] = '\0';	/* chop trailing ] */
-		if (matches == 3 &&
+		if (state->kind == DT_MODSYM_KALLSYMS && !explicit_module &&
 		    !(state->kernel_flag & KERNEL_FLAG_LOADABLE)) {
-			char	*s;
+			char *s = dt_kasstate_modname(state, sym.addr, sym.name);
 
-			s = dt_kasstate_modname(state, sym.addr, sym.name);
 			if (s != NULL)
-				strncpy(sym.mod, s, PATH_MAX);
+				strlcpy(sym.mod, s, sizeof(sym.mod));
 		}
 	}
 
@@ -1927,12 +1992,19 @@ dt_modsym_update(dtrace_hdl_t *dtp, const char *line, dt_kasstate_t *state)
 		dt_module_t	*dmp;
 		int		err;
 
-		dmp = dt_module_lookup_by_name(dtp, modname);
+		/* Separate from last_dmp, which tracks address-range adjacency. */
+		if (state->lookup_dmp && strcmp(state->lookup_name, modname) == 0)
+			dmp = state->lookup_dmp;
+		else
+			dmp = dt_module_lookup_by_name(dtp, modname);
 		if (dmp == NULL) {
 			dmp = dt_module_create(dtp, modname);
 			if (dmp == NULL)
 				return EDT_NOMEM;
 		}
+
+		state->lookup_dmp = dmp;
+		strlcpy(state->lookup_name, modname, sizeof(state->lookup_name));
 
 		if (!(dmp->dm_flags & DT_DM_KERNEL)) {
 			err = dt_kern_module_init(dtp, dmp);
@@ -1979,6 +2051,11 @@ dtrace_update(dtrace_hdl_t *dtp)
 		state = dt_kasstate_new(dtp, DT_MODSYM_KALLMODSYMS);
 	else if ((fd = fopen("/proc/kallsyms", "r")) != NULL)
 		state = dt_kasstate_new(dtp, DT_MODSYM_KALLSYMS);
+
+	if (fd != NULL && state == NULL) {
+		fclose(fd);
+		return dt_set_errno(dtp, EDT_NOMEM);
+	}
 
 	if (fd != NULL) {
 		char *line = NULL;

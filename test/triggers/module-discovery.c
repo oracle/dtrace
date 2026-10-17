@@ -118,6 +118,19 @@ check_discovery(int fallback)
 	    "1000 10 T discovery_symbol [discovery_first]\n"
 	    "1010 10 T discovery_tail [discovery_first]\n";
 	CHECK(dtrace_update(dtp) == 0);
+	/* The bounded parser accepts multiple owners and a final line without LF. */
+	symbols = fallback ?
+	    "100 T _end\n4000 T shared_symbol [discovery_multi_a discovery_multi_b]" :
+	    "100 1 T _end\n4000 10 T shared_symbol [discovery_multi_a discovery_multi_b]";
+	CHECK(dtrace_update(dtp) == 0);
+	{
+		dt_module_t *a = dt_module_lookup_by_name(dtp, "discovery_multi_a");
+		dt_module_t *b = dt_module_lookup_by_name(dtp, "discovery_multi_b");
+
+		CHECK(a != NULL && b != NULL);
+		CHECK(dt_module_symbol_by_name(dtp, a, "shared_symbol") != NULL);
+		CHECK(dt_module_symbol_by_name(dtp, b, "shared_symbol") != NULL);
+	}
 	CHECK((first = dt_module_lookup_by_name(dtp, "discovery_first")) != NULL);
 	CHECK(first->dm_flags & DT_DM_KERNEL);
 	CHECK(first->dm_btf_id == 101);
