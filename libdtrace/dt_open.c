@@ -1312,6 +1312,7 @@ dtrace_close(dtrace_hdl_t *dtp)
 	dt_htab_destroy(dtp->dt_kernsyms);
 	dtp->dt_kernsyms = NULL;
 	dt_htab_destroy(dtp->dt_mods);
+	free(dtp->dt_modranges);
 	dt_htab_destroy(dtp->dt_kernpaths);
 	dt_htab_destroy(dtp->dt_btf_ids);
 

@@ -97,6 +97,7 @@ check_discovery(int fallback)
 	dtrace_addr_range_t *ranges, *kernel_ranges;
 	ctf_file_t *types;
 	GElf_Sym elf;
+	dtrace_syminfo_t si;
 	int err, i;
 
 	CHECK((dtp = dtrace_open(DTRACE_VERSION, DTRACE_O_LP64, &err)) != NULL);
@@ -144,6 +145,12 @@ check_discovery(int fallback)
 	CHECK(ranges->dar_va == 0x1000);
 	CHECK(ranges->dar_size == (fallback ? 0x11 : 0x20));
 	CHECK(dt_symbol_by_addr(first_syms, 0x1000) == sym);
+	first->dm_flags |= DT_DM_LOADED;
+	CHECK(dtrace_lookup_by_addr(dtp, 0x1000, &elf, &si) == 0);
+	CHECK(strcmp(si.object, first->dm_name) == 0);
+	CHECK(dtrace_lookup_by_addr(dtp, 0x1010, &elf, &si) == 0);
+	CHECK(dtrace_lookup_by_addr(dtp, fallback ? 0x1011 : 0x1020,
+				    &elf, &si) == -1);
 
 	/* Keep the old module while discovering another, including a duplicate name. */
 	btf_generation = 200;
@@ -152,15 +159,36 @@ check_discovery(int fallback)
 	    "1000 T discovery_symbol [discovery_first]\n"
 	    "1010 T discovery_tail [discovery_first]\n"
 	    "2000 T discovery_symbol [discovery_second]\n"
+	    "1008 T overlapping_symbol [discovery_overlap]\n"
 	    "3000 T discovery_live [discovery_offline]\n" :
 	    "100 1 T _end\n"
 	    "1000 10 T discovery_symbol [discovery_first]\n"
 	    "1010 10 T discovery_tail [discovery_first]\n"
 	    "2000 10 T discovery_symbol [discovery_second]\n"
+	    "1008 1 T overlapping_symbol [discovery_overlap]\n"
 	    "3000 10 T discovery_live [discovery_offline]\n";
 	CHECK(dtrace_update(dtp) == 0);
 	CHECK((second = dt_module_lookup_by_name(dtp, "discovery_second")) != NULL);
 	CHECK(first->dm_btf_id == 101 && second->dm_btf_id == 202);
+	second->dm_flags |= DT_DM_LOADED;
+	CHECK(dtrace_lookup_by_addr(dtp, 0x2000, &elf, &si) == 0);
+	CHECK(strcmp(si.object, second->dm_name) == 0);
+	{
+		dt_module_t *a = dt_module_lookup_by_name(dtp, "discovery_multi_a");
+		dt_module_t *b = dt_module_lookup_by_name(dtp, "discovery_multi_b");
+
+		a->dm_flags |= DT_DM_LOADED;
+		b->dm_flags |= DT_DM_LOADED;
+		dt_module_t *overlap = dt_module_lookup_by_name(dtp, "discovery_overlap");
+
+		CHECK(overlap != NULL);
+		overlap->dm_flags |= DT_DM_LOADED;
+		CHECK(dtrace_lookup_by_addr(dtp, 0x1008, &elf, &si) == 0);
+		CHECK(strcmp(si.object, first->dm_name) == 0);
+		/* Equal ranges retain the first module's precedence. */
+		CHECK(dtrace_lookup_by_addr(dtp, 0x4000, &elf, &si) == 0);
+		CHECK(strcmp(si.object, a->dm_name) == 0);
+	}
 	CHECK(dt_module_symbol_by_name(dtp, second, "discovery_symbol") != NULL);
 	CHECK(dt_module_symbol_by_name(dtp, offline, "discovery_live") != NULL);
 	CHECK(!(offline->dm_flags & DT_DM_KERN_UNLOADED));
@@ -192,6 +220,8 @@ check_discovery(int fallback)
 		CHECK(kernel->dm_kernsyms == kernel_syms);
 		CHECK(kernel->dm_text_addrs == kernel_ranges);
 		CHECK(first->dm_kernsyms == first_syms);
+		CHECK(dtrace_lookup_by_addr(dtp, 0x1000, &elf, &si) == 0);
+		CHECK(strcmp(si.object, first->dm_name) == 0);
 		CHECK(first->dm_btf_id == 101 && second->dm_btf_id == 202);
 		CHECK(first->dm_text_addrs == ranges);
 		CHECK(first->dm_text_addrs_size == 1);
@@ -205,6 +235,54 @@ check_discovery(int fallback)
 		CHECK(offline->dm_ctfp == types);
 	}
 
+	/* Alternating built-in text/data fragments cross both initial capacities. */
+	{
+		char snapshot[2048];
+		size_t used = 0;
+		dt_module_t *fragmented;
+
+		for (i = 0; i < 12; i++)
+			used += snprintf(snapshot + used, sizeof(snapshot) - used,
+				fallback ? "%x %c fragment_%d [discovery_fragmented]\n" :
+					   "%x 1 %c fragment_%d [discovery_fragmented]\n",
+				0x8000 + i * 0x10, i % 2 ? 'D' : 'T', i);
+		symbols = snapshot;
+		CHECK(dtrace_update(dtp) == 0);
+		fragmented = dt_module_lookup_by_name(dtp, "discovery_fragmented");
+		CHECK(fragmented != NULL);
+		CHECK(fragmented->dm_text_addrs_size == 6);
+		CHECK(fragmented->dm_data_addrs_size == 6);
+		fragmented->dm_flags |= DT_DM_LOADED;
+		for (i = 0; i < 12; i++) {
+			CHECK(dtrace_lookup_by_addr(dtp, 0x8000 + i * 0x10, &elf, &si) == 0);
+			CHECK(strcmp(si.object, fragmented->dm_name) == 0);
+			CHECK(dtrace_lookup_by_addr(dtp, 0x8001 + i * 0x10, &elf, &si) == -1);
+		}
+	}
+	{
+		char malformed[8192], longname[PATH_MAX + 1];
+		const char *rows[] = {
+			"10000000000000000 T bad [discovery_rejected]\n",
+			"1000 T bad [discovery_rejected\n",
+			"1000 ",
+			"1000 T ",
+			NULL
+		};
+
+		for (i = 0; rows[i]; i++) {
+			symbols = rows[i];
+			CHECK(dtrace_update(dtp) == 0);
+			CHECK(dt_module_lookup_by_name(dtp, "discovery_rejected") == NULL);
+		}
+		memset(longname, 'x', sizeof(longname) - 1);
+		longname[sizeof(longname) - 1] = '\0';
+		snprintf(malformed, sizeof(malformed), fallback ?
+			 "1000 T %s [discovery_rejected]\n" :
+			 "1000 1 T %s [discovery_rejected]\n", longname);
+		symbols = malformed;
+		CHECK(dtrace_update(dtp) == 0);
+		CHECK(dt_module_lookup_by_name(dtp, "discovery_rejected") == NULL);
+	}
 	symbols = NULL;
 	dtrace_close(dtp);
 	return 0;
