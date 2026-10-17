@@ -1141,22 +1141,31 @@ dtrace_addr_range_grow(dt_module_t *dmp, int is_text)
 	dtrace_addr_range_t **range;
 	dtrace_addr_range_t *new_range;
 	dtrace_addr_range_t *final_range;
-	size_t *size;
+	size_t *size, *capacity;
 
 	if (is_text) {
 		range = &dmp->dm_text_addrs;
 		size = &dmp->dm_text_addrs_size;
+		capacity = &dmp->dm_text_addrs_cap;
 	} else {
 		range = &dmp->dm_data_addrs;
 		size = &dmp->dm_data_addrs_size;
+		capacity = &dmp->dm_data_addrs_cap;
 	}
 
-	new_range = realloc(*range, sizeof(struct dtrace_addr_range) *
-	    (*size+1));
-	if (new_range == NULL)
-		return NULL;
+	if (*size == *capacity) {
+		size_t cap = *capacity == 0 ? 4 : *capacity * 2;
 
-	*range = new_range;
+		if (cap < *capacity || cap > SIZE_MAX / sizeof(**range))
+			return NULL;
+		new_range = realloc(*range, sizeof(**range) * cap);
+		if (new_range == NULL)
+			return NULL;
+
+		*range = new_range;
+		*capacity = cap;
+	}
+	new_range = *range;
 	final_range = new_range + (*size);
 	final_range->dar_va = 0;
 	final_range->dar_size = 0;

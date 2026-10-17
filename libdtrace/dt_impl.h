@@ -149,8 +149,10 @@ typedef struct dt_module {
 
 	dtrace_addr_range_t *dm_text_addrs; /* text addresses, sorted */
 	size_t dm_text_addrs_size;	 /* number of entries */
+	size_t dm_text_addrs_cap;	 /* allocated entries */
 	dtrace_addr_range_t *dm_data_addrs; /* data/BSS addresses, sorted */
 	size_t dm_data_addrs_size;	 /* number of entries */
+	size_t dm_data_addrs_cap;	 /* allocated entries */
 
 	dt_idhash_t *dm_extern;	/* external symbol definitions */
 
