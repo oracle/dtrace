@@ -383,7 +383,7 @@ dt_btf_add_to_ctf(dtrace_hdl_t *dtp, dt_btf_t *btf, ctf_dict_t *ctf,
 	 * If we already have shared_ctf, we may be looking for a type in that
 	 * shared_ctf.
 	 */
-	if (dtp->dt_shared_ctf && btf != dtp->dt_shared_btf) {
+	if (dt_module_shared_ctf(dtp) && btf != dtp->dt_shared_btf) {
 		if (type_id < dtp->dt_shared_btf->type_cnt)
 			return dtp->dt_shared_btf->ctfids[type_id];
 
@@ -724,9 +724,13 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 	if (dmp) {
 		int	err;
 
-		err = ctf_import(ctf, dtp->dt_shared_ctf);
-		if (err == CTF_ERR)
+		err = ctf_import(ctf, dt_module_shared_ctf(dtp));
+		if (err == CTF_ERR ||
+		    ctf_parent_name_set(ctf, "shared_ctf") == CTF_ERR) {
+			dt_ctf_error(dtp, ctf);
+			ctf_close(ctf);
 			return NULL;
+		}
 
 		ctf_setspecific(ctf, dmp);
 
@@ -775,8 +779,11 @@ dt_btf_to_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_btf_t *btf)
 	}
 
 out:
-	if (ctf_update(ctf) == CTF_ERR)
+	if (ctf_update(ctf) == CTF_ERR) {
+		dt_ctf_error(dtp, ctf);
+		ctf_close(ctf);
 		return NULL;
+	}
 
 	return ctf;
 }
@@ -830,23 +837,25 @@ dt_btf_module_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 
 #ifdef HAVE_LIBCTF
 	/*
-	 * If the module is 'vmlinux', we are creating the shared CTF.
-	 * If the module uses the shared BTF, we create CTF for a NULL BTF.
-	 * Otherwise, convert the module BTF.
+	 * The shared module owns the dictionary generated from vmlinux BTF.
+	 * vmlinux itself, like every other module, imports this dictionary.
 	 */
-	if (strcmp(dmp->dm_name, "vmlinux") == 0)
-		ctf = dt_btf_to_ctf(dtp, NULL, btf);
-	else if (btf == dtp->dt_shared_btf)
-		ctf = dt_btf_to_ctf(dtp, dmp, NULL);
-	else
-		ctf = dt_btf_to_ctf(dtp, dmp, btf);
+	if (dmp == dtp->dt_exec && dt_module_shared_ctf(dtp) == NULL) {
+		dt_module_t *shared = dt_module_create(dtp, "shared_ctf");
 
-	/*
-	 * If generating CTF data for the main kernel, store it as the shared
-	 * CTF.
-	 */
-	if (!dtp->dt_shared_ctf && dtp->dt_shared_btf && btf == dtp->dt_shared_btf)
-		dtp->dt_shared_ctf = ctf;
+		if (shared == NULL) {
+			dt_set_errno(dtp, EDT_NOMEM);
+			return NULL;
+		}
+		shared->dm_ctfp = dt_btf_to_ctf(dtp, NULL, btf);
+		if (shared->dm_ctfp == NULL)
+			return NULL;
+		ctf_setspecific(shared->dm_ctfp, shared);
+		shared->dm_flags |= DT_DM_LOADED;
+	}
+
+	ctf = dt_btf_to_ctf(dtp, dmp,
+			    btf == dtp->dt_shared_btf ? NULL : btf);
 
 	dt_dprintf("Generated %s CTF from BTF (%d types).\n", dmp->dm_name,
 		   btf->type_cnt);

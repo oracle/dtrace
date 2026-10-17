@@ -342,6 +342,10 @@ dt_module_create(dtrace_hdl_t *dtp, const char *name)
 	else
 		dmp->dm_ops = &dt_modops_32;
 	dmp->dm_dtp = dtp;
+	if (strcmp(name, "shared_ctf") == 0) {
+		dmp->dm_flags |= DT_DM_KERNEL | DT_DM_SHARED;
+		dmp->dm_ops = NULL;
+	}
 
 	dt_dprintf("created module %s\n", dmp->dm_name);
 
@@ -398,6 +402,11 @@ dt_module_create_user(dtrace_hdl_t *dtp, const char *name)
 	if (p != NULL)
 		name = p + 1;
 
+	if (strcmp(name, "shared_ctf") == 0) {
+		dt_set_errno(dtp, EEXIST);
+		goto fail;
+	}
+
 	if (strlen(name) >= DTRACE_MODNAMELEN ||
 	    strlen(file) >= sizeof(dmp->dm_file)) {
 		dt_set_errno(dtp, ENAMETOOLONG);
@@ -453,6 +462,15 @@ dt_module_t *
 dt_module_lookup_by_ctf(dtrace_hdl_t *dtp, ctf_file_t *ctfp)
 {
 	return ctfp ? ctf_getspecific(ctfp) : NULL;
+}
+
+/* Return the shared dictionary without loading or creating a module. */
+ctf_file_t *
+dt_module_shared_ctf(dtrace_hdl_t *dtp)
+{
+	dt_module_t *dmp = dt_module_lookup_by_name(dtp, "shared_ctf");
+
+	return dmp == NULL ? NULL : dmp->dm_ctfp;
 }
 
 static void
@@ -762,7 +780,8 @@ dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	 */
 	if ((dmp->dm_flags & DT_DM_KERNEL) || dmp->dm_file[0] == '\0') {
 		/* Load BTF data for the kernel module. */
-		dt_kern_module_find_btf(dtp, dmp);
+		if (!(dmp->dm_flags & DT_DM_SHARED))
+			dt_kern_module_find_btf(dtp, dmp);
 
 		/*
 		 * Find where the kernel module is and preliminarily load its CTF.
@@ -771,13 +790,23 @@ dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		dt_kern_module_find_ctf(dtp, dmp);
 	}
 
+	/* An archive- or BTF-backed shared dictionary has no ELF symbols. */
+	if (dmp->dm_flags & DT_DM_SHARED) {
+		if (dmp->dm_ctfp != NULL) {
+			dmp->dm_flags |= DT_DM_LOADED;
+			return 0;
+		}
+		if (dmp->dm_file[0] == '\0')
+			return dt_set_errno(dtp, EDT_NOCTF);
+	}
+
 	/*
 	 * Modules not found in the CTF archive, including non-kernel modules,
 	 * must pull in the symbol and string tables (in addition to, perhaps,
 	 * the CTF section.)
 	 */
 
-	if (!(dmp->dm_flags & DT_DM_CTF_ARCHIVED)) {
+	if (dmp->dm_ctfp == NULL) {
 		if ((dmp->dm_elf == NULL) && (dt_module_init_elf(dtp, dmp) != 0))
 			return -1; /* dt_errno is set for us */
 
@@ -960,7 +989,7 @@ dt_module_getctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 
 	if ((parent = ctf_parent_name(dmp->dm_ctfp)) != NULL) {
 		assert(strcmp(parent, "shared_ctf") == 0);
-		if (ctf_import(dmp->dm_ctfp, dtp->dt_shared_ctf) < 0) {
+		if (ctf_import(dmp->dm_ctfp, dt_module_shared_ctf(dtp)) < 0) {
 			dt_dprintf("Importing of CTF for %s failed: %s\n",
 			    dmp->dm_name, ctf_errmsg(ctf_errno(dmp->dm_ctfp)));
 			dtp->dt_ctferr = ctf_errno(dmp->dm_ctfp);
@@ -1018,8 +1047,7 @@ dt_module_destroy(dtrace_hdl_t *dtp, dt_module_t *dmp)
 {
 	if (dmp->dm_btf != dtp->dt_shared_btf)
 		dt_btf_destroy(dtp, dmp->dm_btf);
-	if (dmp->dm_ctfp != dtp->dt_shared_ctf)
-		ctf_close(dmp->dm_ctfp);
+	ctf_close(dmp->dm_ctfp);
 	dt_module_clear_elf(dmp);
 	dt_symtab_destroy(dtp, dmp->dm_kernsyms);
 	free(dmp->dm_text_addrs);
@@ -1215,8 +1243,6 @@ dt_kern_module_ctf_from_btf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		dt_dprintf("Cannot generate CTF for module %s from BTF: %s; "
 			   "looking for out-of-tree module.\n",
 			   dmp->dm_name, ctf_errmsg(dtp->dt_ctferr));
-	else
-		dmp->dm_flags |= DT_DM_CTF_ARCHIVED;
 }
 #endif
 
@@ -1254,6 +1280,13 @@ dt_kern_module_find_btf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 static void
 dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 {
+	dt_module_t *shared = dt_module_create(dtp, "shared_ctf");
+
+	if (shared == NULL) {
+		dt_set_errno(dtp, EDT_NOMEM);
+		return;
+	}
+
 	/*
 	 * Module not already known as a kernel module?  It must be an unloaded
 	 * one, since we do not support userspace modules yet.
@@ -1279,7 +1312,7 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	 *
 	 * Check for a CTF archive containing the specified module.
 	 */
-	if (dtp->dt_ctfa == NULL && dtp->dt_shared_ctf == NULL) {
+	if (dtp->dt_ctfa == NULL && shared->dm_ctfp == NULL) {
 		char *ctfa_name;
 		char *to;
 
@@ -1301,10 +1334,10 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 			/*
 			 * Load in the shared CTF immediately.
 			 */
-			dtp->dt_shared_ctf = ctf_arc_open_by_name(dtp->dt_ctfa,
+			shared->dm_ctfp = ctf_arc_open_by_name(dtp->dt_ctfa,
 			    "shared_ctf", &dtp->dt_ctferr);
 
-			if (dtp->dt_shared_ctf == NULL) {
+			if (shared->dm_ctfp == NULL) {
 				dt_dprintf("Cannot get shared CTF from archive %s: %s.",
 				    ctfa_name, ctf_errmsg(dtp->dt_ctferr));
 				ctf_arc_close(dtp->dt_ctfa);
@@ -1312,6 +1345,8 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 				free(dtp->dt_ctfa_data);
 				dtp->dt_ctfa_data = NULL;
 			} else {
+				shared->dm_flags |= DT_DM_LOADED | DT_DM_CTF_ARCHIVED;
+				ctf_setspecific(shared->dm_ctfp, shared);
 				dt_dprintf("Loaded shared CTF from archive %s.\n",
 				    ctfa_name);
 			}
@@ -1328,9 +1363,10 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 			 * data for shared_ctf from.
 			 */
 			mod = dt_module_lookup_by_name(dtp, "vmlinux");
+			if (mod != NULL && mod->dm_btf == NULL)
+				dt_btf_load_module(dtp, mod);
 			if (mod != NULL && mod->dm_btf != NULL) {
 				dt_kern_module_ctf_from_btf(dtp, mod);
-				dtp->dt_shared_ctf = mod->dm_ctfp;
 			} else
 				dt_dprintf("No BTF data for vmlinux; "
 					   "looking for in-module CTF instead.\n");
@@ -1344,6 +1380,14 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		if (dtp->dt_ctfa_path == NULL)
 			free(ctfa_name);
 	}
+
+	/* The shared module already owns the archive/BTF parent dictionary. */
+	if (dmp == shared && shared->dm_ctfp != NULL)
+		return;
+
+	/* Older kernels carry the shared dictionary in the ctf module. */
+	if (dmp != shared && shared->dm_ctfp == NULL)
+		dt_module_getctf(dtp, shared);
 
 	if (dtp->dt_ctfa != NULL) {
 		dt_dprintf("Loading CTF for module %s from archive.\n",
@@ -1378,7 +1422,7 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		 */
 		if ((parent = ctf_parent_name(dmp->dm_ctfp)) != NULL) {
 			assert(strcmp(parent, "shared_ctf") == 0);
-			if (ctf_import(dmp->dm_ctfp, dtp->dt_shared_ctf) < 0) {
+			if (ctf_import(dmp->dm_ctfp, dt_module_shared_ctf(dtp)) < 0) {
 				dt_dprintf("Importing of CTF for %s "
 				    "failed: %s\n", dmp->dm_name,
 				    ctf_errmsg(ctf_errno(dmp->dm_ctfp)));
@@ -1391,7 +1435,8 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 			    dmp->dm_name, (void *)dmp->dm_ctfp);
 		}
 
-		dmp->dm_flags |= DT_DM_CTF_ARCHIVED;
+		if (dtp->dt_ctfa != NULL)
+			dmp->dm_flags |= DT_DM_CTF_ARCHIVED;
 		ctf_setspecific(dmp->dm_ctfp, dmp);
 #ifdef HAVE_LIBCTF
 	} else if (dmp->dm_btf != NULL) {
@@ -1412,7 +1457,8 @@ dt_kern_module_find_ctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	if ((dmp->dm_ctfp == NULL) || (dmp->dm_flags & DT_DM_KERN_UNLOADED)) {
 		dt_kern_path_t *dkpp = NULL;
 
-		dkpp = dt_kern_path_lookup_by_name(dtp, dmp->dm_name);
+		dkpp = dt_kern_path_lookup_by_name(dtp,
+		    dmp == shared ? "ctf" : dmp->dm_name);
 
 		/*
 		 * Not found, or not a kernel module at all?  That's quite

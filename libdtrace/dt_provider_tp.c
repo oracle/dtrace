@@ -6,6 +6,7 @@
  *
  * Provider support code for tracepoint-based probes.
  */
+#include <dt_module.h>
 #include <errno.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -322,7 +323,7 @@ dt_tp_event_info(dtrace_hdl_t *dtp, FILE *f, dt_valid_arg_f *valid_arg,
 
 			strp = tstr;
 			if (alpha) {
-				ctf_file_t	*ctfp = dtp->dt_shared_ctf;
+				ctf_file_t	*ctfp = dt_module_shared_ctf(dtp);
 				ctf_id_t	type;
 				size_t		esize = 1;
 
