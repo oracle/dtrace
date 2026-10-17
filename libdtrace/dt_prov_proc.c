@@ -1,11 +1,12 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  *
  * The 'proc' SDT provider for DTrace specific probes.
  */
+#include <dt_module.h>
 #include <assert.h>
 #include <errno.h>
 
@@ -131,7 +132,7 @@ static int trampoline(dt_pcb_t *pcb, uint_t exitlbl)
 			emit(dlp, BPF_STORE(BPF_DW, BPF_REG_7, DMST_ARG(0), BPF_REG_0));
 		}
 	} else if (strcmp(prp->desc->prb, "exit") == 0) {
-		ctf_file_t	*cfp = dtp->dt_shared_ctf;
+		ctf_file_t	*cfp = dt_module_shared_ctf(dtp);
 		ctf_id_t	type;
 		ctf_membinfo_t	ctm;
 		int		rc = 0;

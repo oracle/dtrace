@@ -79,6 +79,7 @@
 #include <dirent.h>
 #include <port.h>
 #include <dt_pcap.h>
+#include <dt_module.h>
 #include <dt_program.h>
 #include <dt_provider.h>
 #include <dt_probe.h>
@@ -1084,7 +1085,7 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 			case DT_CONST_TASK_REAL_PARENT:
 			case DT_CONST_TASK_COMM:
 			case DT_CONST_TASK_MM: {
-				ctf_file_t *cfp = dtp->dt_shared_ctf;
+				ctf_file_t *cfp = dt_module_shared_ctf(dtp);
 				ctf_id_t type;
 				ctf_membinfo_t ctm;
 				int rc = 0;
@@ -1120,7 +1121,7 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 			}
 			case DT_CONST_TASK_MM_ARG_START:
 			case DT_CONST_TASK_MM_ARG_END: {
-				ctf_file_t *cfp = dtp->dt_shared_ctf;
+				ctf_file_t *cfp = dt_module_shared_ctf(dtp);
 				ctf_id_t type;
 				ctf_membinfo_t ctm;
 				int rc = 0;
@@ -1146,7 +1147,7 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 				continue;
 			}
 			case DT_CONST_MUTEX_OWNER: {
-				ctf_file_t *cfp = dtp->dt_shared_ctf;
+				ctf_file_t *cfp = dt_module_shared_ctf(dtp);
 				ctf_id_t type;
 				ctf_membinfo_t ctm;
 				int rc;
@@ -1175,7 +1176,7 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 				 *
 				 * FIXME: what about CONFIG_PREEMPT_RT?
 				 */
-				ctf_file_t *cfp = dtp->dt_shared_ctf;
+				ctf_file_t *cfp = dt_module_shared_ctf(dtp);
 				ctf_id_t type;
 				ctf_membinfo_t ctm;
 				int rc;
@@ -1256,7 +1257,7 @@ dt_link_construct(dtrace_hdl_t *dtp, const dt_probe_t *prp, dtrace_difo_t *dp,
 	return pc;
 
  err_ctf:
-	dtp->dt_ctferr = ctf_errno(dtp->dt_shared_ctf);
+	dtp->dt_ctferr = ctf_errno(dt_module_shared_ctf(dtp));
 	return dt_set_errno(dtp, EDT_CTF);
 }
 

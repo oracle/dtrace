@@ -1316,8 +1316,6 @@ dtrace_close(dtrace_hdl_t *dtp)
 
 	if (dtp->dt_shared_btf != NULL)
 		dt_btf_destroy(dtp, dtp->dt_shared_btf);
-	if (dtp->dt_shared_ctf != NULL)
-		ctf_close(dtp->dt_shared_ctf);
 	if (dtp->dt_ctfa != NULL)
 		ctf_arc_close(dtp->dt_ctfa);
 	free(dtp->dt_ctfa_data);
@@ -1369,6 +1367,7 @@ dtrace_close(dtrace_hdl_t *dtp)
 	free(dtp->dt_drops);
 	free(dtp->dt_module_path);
 	free(dtp->dt_ctfa_path);
+	free(dtp->dt_btf_path);
 	free(dtp);
 
 	dt_debug_dump(0);

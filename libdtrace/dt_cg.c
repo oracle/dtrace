@@ -5329,7 +5329,7 @@ dt_cg_uregs(unsigned int idx, dt_node_t *dnp, dt_irlist_t *dlp, dt_regset_t *drp
 		 * since it can be smaller, at least on aarch64.
 		 */
 		{
-			ctf_file_t *cfp = yypcb->pcb_hdl->dt_shared_ctf;
+			ctf_file_t *cfp = dt_module_shared_ctf(yypcb->pcb_hdl);
 			ctf_id_t type;
 
 			type = ctf_lookup_by_name(cfp, "struct pt_regs");

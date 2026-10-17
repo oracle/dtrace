@@ -22,6 +22,7 @@ extern dt_module_t *dt_module_lookup_by_name(dtrace_hdl_t *, const char *);
 extern dt_module_t *dt_module_lookup_by_ctf(dtrace_hdl_t *, ctf_file_t *);
 extern int dt_module_sym_iter(const dt_module_t *, proc_sym_f *, void *);
 
+extern ctf_file_t *dt_module_shared_ctf(dtrace_hdl_t *);
 extern ctf_file_t *dt_module_getctf(dtrace_hdl_t *, dt_module_t *);
 extern dt_ident_t *dt_module_extern(dtrace_hdl_t *, dt_module_t *,
     const char *, const dtrace_typeinfo_t *);
