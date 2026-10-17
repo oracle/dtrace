@@ -1588,6 +1588,8 @@ typedef struct dt_kasstate {
 	GElf_Addr	mod_saddr, mod_eaddr;
 	char		mod_name[PATH_MAX];
 	FILE		*rfp;
+	char		*line;
+	size_t		line_n;
 	int		kind;
 
 	int		kernel_flag;
@@ -1630,8 +1632,7 @@ dt_kasstate_new(dtrace_hdl_t *dtp, int kind)
 static char *
 dt_kasstate_modname(dt_kasstate_t *state, GElf_Addr addr, const char *name)
 {
-	char	*line = NULL;
-	size_t	line_n = 0;
+	char	*line;
 
 	/* Nothing to be done if there is no modules.builtin.ranges file. */
 	if (state->rfp == NULL)
@@ -1658,9 +1659,10 @@ dt_kasstate_modname(dt_kasstate_t *state, GElf_Addr addr, const char *name)
 	 * is found that either contains the address or goes beyond.
 	 */
 	while (addr > state->mod_eaddr) {
-		if (getline(&line, &line_n, state->rfp) == -1)
+		if (getline(&state->line, &state->line_n, state->rfp) == -1)
 			break;
 
+		line = state->line;
 		if (sscanf(line, "%*s %lx-%lx %[A-Za-z0-9_ ]",
 			   &state->mod_saddr, &state->mod_eaddr,
 			   state->mod_name) == 3) {
@@ -2051,6 +2053,7 @@ dtrace_update(dtrace_hdl_t *dtp)
 		if (state->rfp)
 			fclose(state->rfp);
 
+		free(state->line);
 		dt_free(dtp, state);
 	}
 
