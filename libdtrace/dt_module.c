@@ -34,7 +34,10 @@
 #define GZCHUNKSIZE (1024*512)		    /* gzip uncompression chunk size */
 
 static void
-dt_module_unload(dtrace_hdl_t *dtp, dt_module_t *dmp);
+dt_module_destroy(dtrace_hdl_t *dtp, dt_module_t *dmp);
+
+static void
+dt_module_clear_elf(dt_module_t *dmp);
 
 static void
 dt_module_shuffle_to_start(dtrace_hdl_t *dtp, const char *name);
@@ -242,7 +245,7 @@ dt_module_del_mod(dt_module_t *head, dt_module_t *dmp)
 	head = dt_module_del(head, dmp);
 	dt_list_delete(&dmp->dm_dtp->dt_modlist, dmp);
 
-	dt_module_unload(dmp->dm_dtp, dmp);
+	dt_module_destroy(dmp->dm_dtp, dmp);
 	free(dmp);
 
 	return head;
@@ -799,7 +802,7 @@ dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		 */
 
 		if (dt_module_load_sect(dtp, dmp, &dmp->dm_ctdata) == -1) {
-			dt_module_unload(dtp, dmp);
+			dt_module_clear_elf(dmp);
 			return -1; /* dt_errno is set for us */
 		}
 
@@ -848,7 +851,7 @@ dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	 */
 	if (dt_module_load_sect(dtp, dmp, &dmp->dm_symtab) == -1 ||
 	    dt_module_load_sect(dtp, dmp, &dmp->dm_strtab) == -1) {
-		dt_module_unload(dtp, dmp);
+		dt_module_clear_elf(dmp);
 		return -1; /* dt_errno is set for us */
 	}
 
@@ -895,7 +898,7 @@ dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	dmp->dm_flags |= DT_DM_LOADED;
 	return 0;
 oom:
-	dt_module_unload(dtp, dmp);
+	dt_module_clear_elf(dmp);
 	return dt_set_errno(dtp, EDT_NOMEM);
 }
 
@@ -975,18 +978,12 @@ dt_module_getctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	return dmp->dm_ctfp;
 }
 
-/*ARGSUSED*/
+/*
+ * Discard a partial ELF load without invalidating persistent kernel metadata.
+ */
 static void
-dt_module_unload(dtrace_hdl_t *dtp, dt_module_t *dmp)
+dt_module_clear_elf(dt_module_t *dmp)
 {
-	if (dmp->dm_btf != dtp->dt_shared_btf)
-		dt_btf_destroy(dtp, dmp->dm_btf);
-	dmp->dm_btf = NULL;
-
-	if (dmp->dm_ctfp != dtp->dt_shared_ctf)
-		ctf_close(dmp->dm_ctfp);
-	dmp->dm_ctfp = NULL;
-
 	free(dmp->dm_ctdata_data);
 	dmp->dm_ctdata_data = NULL;
 
@@ -1003,29 +1000,31 @@ dt_module_unload(dtrace_hdl_t *dtp, dt_module_t *dmp)
 	free(dmp->dm_asmap);
 	dmp->dm_asmap = NULL;
 
-	dt_symtab_destroy(dtp, dmp->dm_kernsyms);
-	dmp->dm_kernsyms = NULL;
-
 	dmp->dm_symfree = 0;
 	dmp->dm_nsymbuckets = 0;
 	dmp->dm_nsymelems = 0;
 	dmp->dm_asrsv = 0;
 	dmp->dm_aslen = 0;
 
-	free(dmp->dm_text_addrs);
-	free(dmp->dm_data_addrs);
-	dmp->dm_text_addrs = NULL;
-	dmp->dm_data_addrs = NULL;
-	dmp->dm_text_addrs_size = 0;
-	dmp->dm_data_addrs_size = 0;
-
-	dt_idhash_destroy(dmp->dm_extern);
-	dmp->dm_extern = NULL;
-
 	elf_end(dmp->dm_elf);
 	dmp->dm_elf = NULL;
 
 	dmp->dm_flags &= ~DT_DM_LOADED;
+}
+
+/* Release module metadata only when its owning module is destroyed. */
+static void
+dt_module_destroy(dtrace_hdl_t *dtp, dt_module_t *dmp)
+{
+	if (dmp->dm_btf != dtp->dt_shared_btf)
+		dt_btf_destroy(dtp, dmp->dm_btf);
+	if (dmp->dm_ctfp != dtp->dt_shared_ctf)
+		ctf_close(dmp->dm_ctfp);
+	dt_module_clear_elf(dmp);
+	dt_symtab_destroy(dtp, dmp->dm_kernsyms);
+	free(dmp->dm_text_addrs);
+	free(dmp->dm_data_addrs);
+	dt_idhash_destroy(dmp->dm_extern);
 }
 
 /*
@@ -1768,8 +1767,7 @@ dt_modsym_addsym(dtrace_hdl_t *dtp, dt_module_t *dmp, dt_kallsym_t *sym,
  * ranges as needed, and add the symbol in this line to the module's kernel
  * symbol table.
  *
- * If we return non-NULL, we might have a changing file, probably due
- * to module unloading during read.  Perhaps this case should trigger a retry.
+ * Modules discovered by an earlier update retain their symbols and ranges.
  */
 static int
 dt_modsym_update(dtrace_hdl_t *dtp, const char *line, dt_kasstate_t *state)
@@ -1877,11 +1875,20 @@ dt_modsym_update(dtrace_hdl_t *dtp, const char *line, dt_kasstate_t *state)
 			dmp = dt_module_create(dtp, modname);
 			if (dmp == NULL)
 				return EDT_NOMEM;
+		}
 
+		if (!(dmp->dm_flags & DT_DM_KERNEL)) {
 			err = dt_kern_module_init(dtp, dmp);
 			if (err != 0)
 				return err;
 		}
+
+		/* Never replace metadata for a previously discovered module. */
+		if (dmp->dm_flags & DT_DM_KERN_SYMS)
+			continue;
+
+		/* A module previously known only through on-disk types is now live. */
+		dmp->dm_flags &= ~DT_DM_KERN_UNLOADED;
 
 		err = dt_modsym_addsym(dtp, dmp, &sym, state);
 		if (err != 0)
@@ -1895,8 +1902,9 @@ dt_modsym_update(dtrace_hdl_t *dtp, const char *line, dt_kasstate_t *state)
 #undef KERNEL_FLAG_INIT_SCRATCH
 
 /*
- * Unload all the loaded modules and then refresh the module cache with the
- * latest list of loaded modules and their address ranges.
+ * Discover new kernel modules without invalidating existing symbols, address
+ * ranges, or types.  Module unloading and reloading are not supported: the first
+ * discovered instance of a module is retained until the handle is closed.
  */
 int
 dtrace_update(dtrace_hdl_t *dtp)
@@ -1904,10 +1912,6 @@ dtrace_update(dtrace_hdl_t *dtp)
 	dt_module_t	*dmp;
 	FILE		*fd;
 	dt_kasstate_t	*state = NULL;
-
-	for (dmp = dt_list_next(&dtp->dt_modlist);
-	    dmp != NULL; dmp = dt_list_next(dmp))
-		dt_module_unload(dtp, dmp);
 
 	/*
 	 * Note all the symbols currently loaded into the kernel's address
@@ -1945,12 +1949,20 @@ dtrace_update(dtrace_hdl_t *dtp)
 	 */
 	for (dmp = dt_list_next(&dtp->dt_modlist); dmp != NULL;
 	    dmp = dt_list_next(dmp)) {
+		if (!(dmp->dm_flags & DT_DM_KERNEL) ||
+		    (dmp->dm_flags & (DT_DM_KERN_SYMS | DT_DM_KERN_UNLOADED)))
+			continue;
+
 		if (dmp->dm_kernsyms != NULL) {
 			dt_symtab_sort(dmp->dm_kernsyms,
 				       state->kind == DT_MODSYM_KALLSYMS);
 			dt_symtab_pack(dmp->dm_kernsyms);
 		}
+		dmp->dm_flags |= DT_DM_KERN_SYMS;
 	}
+
+	/* Discover BTF IDs for new modules, retaining IDs already cached. */
+	dt_btf_get_module_ids(dtp);
 
 	/*
 	 * Look up all the macro identifiers and set di_id to the latest value.
@@ -2082,10 +2094,8 @@ dtrace_lookup_by_name(dtrace_hdl_t *dtp, const char *object, const char *name,
 
 	/*
 	 * Search loaded kernel symbols first, iff searching all kernel symbols
-	 * is requested.  This is only an optimization: there are (obscure)
-	 * cases in which loaded kernel symbols might not end up in this hash
-	 * (e.g. if a kernel symbol is duplicated in multiple modules, then one
-	 * of them is unloaded).
+	 * is requested.  Fall back to per-module lookup for symbols loaded
+	 * from ELF objects rather than the running kernel.
 	 */
 	if ((object == DTRACE_OBJ_EVERY || object == DTRACE_OBJ_KMODS) &&
 	    dtp->dt_kernsyms) {
