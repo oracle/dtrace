@@ -1479,10 +1479,59 @@ dt_btf_lookup_name_kind(dtrace_hdl_t *dtp, dt_module_t *dmp, const char *name,
 	return id;
 }
 
+/*
+ * Retain a descriptor as well as the ID: otherwise an unloaded object's ID
+ * could be reused and a later enumeration could mistake it for a cached one.
+ * Only IDs assigned to modules are retained, bounding descriptor use by the
+ * number of modules discovered by this handle.
+ */
+typedef struct dt_btf_id {
+	dt_hentry_t he;
+	uint32_t id;
+	int fd;
+} dt_btf_id_t;
+
+static uint32_t
+dt_btf_id_hval(const dt_btf_id_t *entry)
+{
+	return entry->id;
+}
+
+static int
+dt_btf_id_cmp(const dt_btf_id_t *a, const dt_btf_id_t *b)
+{
+	return a->id != b->id;
+}
+
+DEFINE_HE_STD_LINK_FUNCS(dt_btf_id, dt_btf_id_t, he)
+
+static void *
+dt_btf_id_release(dt_btf_id_t *head, dt_btf_id_t *entry)
+{
+	head = dt_btf_id_del(head, entry);
+	close(entry->fd);
+	free(entry);
+	return head;
+}
+
+static dt_htab_ops_t dt_btf_id_ops = {
+	.hval = (htab_hval_fn)dt_btf_id_hval,
+	.cmp = (htab_cmp_fn)dt_btf_id_cmp,
+	.add = (htab_add_fn)dt_btf_id_add,
+	.del = (htab_del_fn)dt_btf_id_release,
+	.next = (htab_next_fn)dt_btf_id_next
+};
+
 int
 dt_btf_get_module_ids(dtrace_hdl_t *dtp)
 {
 	uint32_t	id = 0;
+
+	if (dtp->dt_btf_ids == NULL) {
+		dtp->dt_btf_ids = dt_htab_create(&dt_btf_id_ops);
+		if (dtp->dt_btf_ids == NULL)
+			return dt_set_errno(dtp, EDT_NOMEM);
+	}
 
 	for (;;) {
 		int		rc, fd;
@@ -1490,6 +1539,7 @@ dt_btf_get_module_ids(dtrace_hdl_t *dtp)
 		char		name[PATH_MAX];
 		uint32_t	size = sizeof(info);
 		dt_module_t	*dmp;
+		dt_btf_id_t	tmpl, *entry;
 
 		rc = dt_bpf_btf_get_next_id(id, &id);
 		if (rc) {
@@ -1500,6 +1550,10 @@ dt_btf_get_module_ids(dtrace_hdl_t *dtp)
 
 			return dt_set_errno(dtp, errno);
 		}
+
+		tmpl.id = id;
+		if (dt_htab_lookup(dtp->dt_btf_ids, &tmpl) != NULL)
+			continue;
 
 		fd = dt_bpf_btf_get_fd_by_id(id);
 		if (fd < 0) {
@@ -1513,14 +1567,31 @@ dt_btf_get_module_ids(dtrace_hdl_t *dtp)
 		info.name = (uint64_t)name;
 		info.name_len = sizeof(name);
 		rc = dt_bpf_btf_get_info_by_fd(fd, &info, &size);
-		close(fd);
-		if (rc)
-			return dt_set_errno(dtp, errno);
+		if (rc) {
+			int err = errno;
+
+			close(fd);
+			return dt_set_errno(dtp, err);
+		}
 
 		dmp = dt_module_lookup_by_name(dtp, name);
-		if (dmp == NULL || dmp->dm_btf_id != 0)
+		if (!info.kernel_btf || dmp == NULL || dmp->dm_btf_id != 0) {
+			close(fd);
 			continue;
+		}
 
+		entry = calloc(1, sizeof(*entry));
+		if (entry == NULL) {
+			close(fd);
+			return dt_set_errno(dtp, EDT_NOMEM);
+		}
+		entry->id = id;
+		entry->fd = fd;
+		if (dt_htab_insert(dtp->dt_btf_ids, entry) != 0) {
+			close(fd);
+			free(entry);
+			return dt_set_errno(dtp, EDT_NOMEM);
+		}
 		dmp->dm_btf_id = id;
 	}
 }

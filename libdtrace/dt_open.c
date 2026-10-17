@@ -1313,6 +1313,7 @@ dtrace_close(dtrace_hdl_t *dtp)
 	dtp->dt_kernsyms = NULL;
 	dt_htab_destroy(dtp->dt_mods);
 	dt_htab_destroy(dtp->dt_kernpaths);
+	dt_htab_destroy(dtp->dt_btf_ids);
 
 	if (dtp->dt_ctfa != NULL)
 		ctf_arc_close(dtp->dt_ctfa);

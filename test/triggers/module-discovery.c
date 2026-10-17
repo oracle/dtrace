@@ -22,6 +22,7 @@
 static const char *symbols;
 static int kallsyms;
 static uint32_t btf_generation, btf_id;
+static int btf_queries;
 
 extern FILE *__real_fopen64(const char *, const char *);
 
@@ -78,6 +79,8 @@ __wrap_dt_bpf_btf_get_info_by_fd(int fd, btf_info_t *info, uint32_t *size)
 
 	if (symbols == NULL)
 		return __real_dt_bpf_btf_get_info_by_fd(fd, info, size);
+	btf_queries++;
+	info->kernel_btf = 1;
 	snprintf((char *)(uintptr_t)info->name, info->name_len, "%s",
 		 names[btf_id - btf_generation - 1]);
 	return 0;
@@ -170,6 +173,14 @@ check_discovery(int fallback)
 		found_second += dt_symbol_module(entry) == second;
 	}
 	CHECK(count == 2 && found_first == 1 && found_second == 1);
+
+	/* Cached IDs are pinned; enumeration only queries unassigned reload IDs. */
+	btf_queries = 0;
+	CHECK(dtrace_update(dtp) == 0);
+	CHECK(btf_queries == 2);
+	btf_queries = 0;
+	CHECK(dtrace_update(dtp) == 0);
+	CHECK(btf_queries == 2);
 
 	/* Disappearance and reappearance at a new address do not replace metadata. */
 	for (i = 0; i < 4; i++) {

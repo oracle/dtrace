@@ -314,6 +314,7 @@ struct dtrace_hdl {
 	ctf_archive_t *dt_ctfa; /* ctf archive for the entire kernel tree */
 	void *dt_ctfa_data;	/* backing data for dt_ctfa */
 	char *dt_btf_path;	/* path to vmlinux.btf */
+	dt_htab_t *dt_btf_ids; /* retained module BTF IDs and descriptors */
 	dt_htab_t *dt_kernpaths; /* hash table of dt_kern_path_t's */
 	dt_module_t *dt_exec;	/* pointer to executable module */
 	dt_module_t *dt_cdefs;	/* pointer to C dynamic type module */
