@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -18,6 +18,7 @@
 #include <port.h>
 #include <dt_aggregate.h>
 #include <dt_bpf.h>
+#include <dt_module.h>
 
 typedef struct dt_ahashent {
 	struct dt_ahashent *dtahe_prev;		/* prev on hash chain */
@@ -394,34 +395,15 @@ dt_aggregate_mod(dtrace_hdl_t *dtp, uint64_t *addr)
 		return;
 	}
 
-	for (dmp = dt_list_next(&dtp->dt_modlist); dmp != NULL;
-	    dmp = dt_list_next(dmp)) {
-		/*
-		 * Check text and data ranges for match.  If there is a range
-		 * that covers the given address, normalize it.
-		 */
-		if (dmp->dm_text_addrs != NULL &&
-		    bsearch(addr, dmp->dm_text_addrs, dmp->dm_text_addrs_size,
-			    sizeof(struct dtrace_addr_range),
-			    dtrace_addr_range_cmp) != NULL) {
+	dmp = dt_module_by_addr(dtp, *addr);
+	if (dmp == NULL)
+		return;
 
-			*addr = dmp->dm_text_addrs[0].dar_va;
-			return;
-		}
-
-		if (dmp->dm_data_addrs != NULL &&
-		    bsearch(addr, dmp->dm_data_addrs, dmp->dm_data_addrs_size,
-			    sizeof(struct dtrace_addr_range),
-			    dtrace_addr_range_cmp) != NULL) {
-
-			if (dmp->dm_text_addrs != NULL)
-				*addr = dmp->dm_text_addrs[0].dar_va;
-			else
-				*addr = dmp->dm_data_addrs[0].dar_va;
-
-			return;
-		}
-	}
+	/* Normalize text and data addresses to the same module address. */
+	if (dmp->dm_text_addrs != NULL)
+		*addr = dmp->dm_text_addrs[0].dar_va;
+	else
+		*addr = dmp->dm_data_addrs[0].dar_va;
 }
 
 static dtrace_aggid_t

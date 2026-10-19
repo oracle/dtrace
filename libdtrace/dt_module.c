@@ -2421,7 +2421,7 @@ dt_module_ranges_build(dtrace_hdl_t *dtp)
 	return 0;
 }
 
-static dt_module_t *
+dt_module_t *
 dt_module_by_addr(dtrace_hdl_t *dtp, GElf_Addr addr)
 {
 	dt_module_range_t *index;
