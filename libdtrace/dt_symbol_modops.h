@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -18,7 +18,7 @@
 #define ELFIZE(suffix) EXJOINMID(ELF,BITS,_##suffix)
 
 static uint_t
-BITIZE(dt_module_syminit)(dt_module_t *dmp)
+BITIZE(dt_module_syminit)(dt_module_symbols_t *dmp)
 {
 	const ElfIZE(Sym) *sym = dmp->dm_symtab.cts_data;
 	const char *base = dmp->dm_strtab.cts_data;
@@ -27,7 +27,7 @@ BITIZE(dt_module_syminit)(dt_module_t *dmp)
 	uint_t asrsv = 0;
 
 	for (i = 0; i < n; i++, sym++) {
-		const char *name = base + sym->st_name;
+		const char *name;
 		uchar_t type = ELFIZE(ST_TYPE)(sym->st_info);
 
 		if (type >= STT_NUM || type == STT_SECTION)
@@ -35,6 +35,10 @@ BITIZE(dt_module_syminit)(dt_module_t *dmp)
 
 		if (sym->st_name == 0 || sym->st_name >= ss_size)
 			continue; /* skip null or invalid names */
+
+		name = base + sym->st_name;
+		if (memchr(name, '\0', ss_size - sym->st_name) == NULL)
+			continue; /* skip unterminated names */
 
 		if (sym->st_value != 0 &&
 		    (ELFIZE(ST_BIND)(sym->st_info) != STB_LOCAL || sym->st_size))
@@ -83,7 +87,7 @@ BITIZE(dt_module_symcomp)(const void *lp, const void *rp, void *strtabp)
 }
 
 static void
-BITIZE(dt_module_symsort)(dt_module_t *dmp)
+BITIZE(dt_module_symsort)(dt_module_symbols_t *dmp)
 {
 	ElfIZE(Sym) *symtab = (ElfIZE(Sym) *)dmp->dm_symtab.cts_data;
 	ElfIZE(Sym) **sympp = (ElfIZE(Sym) **)dmp->dm_asmap;
@@ -106,7 +110,7 @@ BITIZE(dt_module_symsort)(dt_module_t *dmp)
 }
 
 static GElf_Sym *
-BITIZE(dt_module_symname)(dt_module_t *dmp, const char *name,
+BITIZE(dt_module_symname)(const dt_module_symbols_t *dmp, const char *name,
     GElf_Sym *symp, uint_t *idp)
 {
 	const ElfIZE(Sym) *symtab = dmp->dm_symtab.cts_data;
@@ -136,7 +140,7 @@ BITIZE(dt_module_symname)(dt_module_t *dmp, const char *name,
 }
 
 static GElf_Sym *
-BITIZE(dt_module_symaddr)(dt_module_t *dmp, GElf_Addr addr,
+BITIZE(dt_module_symaddr)(const dt_module_symbols_t *dmp, GElf_Addr addr,
     GElf_Sym *symp, uint_t *idp)
 {
 	const ElfIZE(Sym) **asmap = (const ElfIZE(Sym) **)dmp->dm_asmap;

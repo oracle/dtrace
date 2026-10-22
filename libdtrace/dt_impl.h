@@ -115,12 +115,14 @@ typedef struct dt_intdesc {
 	uintmax_t did_limit;	/* maximum positive value held by type */
 } dt_intdesc_t;
 
+struct dt_module_symbols;
+
 typedef struct dt_modops {
-	uint_t (*do_syminit)(struct dt_module *);
-	void (*do_symsort)(struct dt_module *);
-	GElf_Sym *(*do_symname)(struct dt_module *,
+	uint_t (*do_syminit)(struct dt_module_symbols *);
+	void (*do_symsort)(struct dt_module_symbols *);
+	GElf_Sym *(*do_symname)(const struct dt_module_symbols *,
 	    const char *, GElf_Sym *, uint_t *);
-	GElf_Sym *(*do_symaddr)(struct dt_module *,
+	GElf_Sym *(*do_symaddr)(const struct dt_module_symbols *,
 	    GElf_Addr, GElf_Sym *, uint_t *);
 } dt_modops_t;
 
@@ -137,6 +139,20 @@ typedef struct dt_modsym {
 	uint_t dms_symid;	/* id of corresponding symbol */
 	uint_t dms_next;	/* index of next element in hash chain */
 } dt_modsym_t;
+
+/* Independent ELF symbol tables: preserve indices used by CTF. */
+typedef struct dt_module_symbols {
+	ctf_sect_t dm_symtab;
+	ctf_sect_t dm_strtab;
+	uint_t *dm_symbuckets;	/* symbol table hash buckets (chain indices) */
+	dt_modsym_t *dm_symchains; /* symbol table hash chains buffer */
+	void *dm_asmap;		/* symbol pointers sorted by value */
+	uint_t dm_symfree;	/* index of next free hash element */
+	uint_t dm_nsymbuckets;	/* number of elements in bucket array */
+	uint_t dm_nsymelems;	/* number of elements in hash table */
+	uint_t dm_asrsv;	/* actual reserved size of dm_asmap */
+	uint_t dm_aslen;	/* number of entries in dm_asmap */
+} dt_module_symbols_t;
 
 typedef struct dt_module {
 	dt_list_t dm_list;	/* list forward/back pointers */
@@ -157,7 +173,7 @@ typedef struct dt_module {
 	dt_idhash_t *dm_extern;	/* external symbol definitions */
 
 	/*
-	 * Kernel modules populate the fields below only for the sake of CTF.
+	 * Loaded kernel modules populate these fields only for the sake of CTF.
 	 * When a CTF archive is available, most are not populated at all.
 	 */
 	const dt_modops_t *dm_ops; /* pointer to data model's ops vector */
@@ -165,8 +181,7 @@ typedef struct dt_module {
 	ctf_file_t *dm_ctfp;	/* CTF container handle */
 	void *dm_ctdata_data;	/* CTF section data (dynamically allocated) */
 	ctf_sect_t dm_ctdata;	/* CTF data for module */
-	ctf_sect_t dm_symtab;	/* symbol table */
-	ctf_sect_t dm_strtab;	/* string table */
+	dt_module_symbols_t dm_symbols[2]; /* .symtab, then .dynsym */
 	uint32_t dm_btf_id;	/* BTF dict id */
 	struct dt_btf *dm_btf;	/* BTF data for module */
 
@@ -174,18 +189,6 @@ typedef struct dt_module {
 	 * Kernel modules only.
 	 */
 	dt_symtab_t *dm_kernsyms; /* module kernel symbol table */
-
-	/*
-	 * Userspace modules only.
-	 */
-	uint_t *dm_symbuckets;	/* symbol table hash buckets (chain indices) */
-	dt_modsym_t *dm_symchains; /* symbol table hash chains buffer */
-	void *dm_asmap;		/* symbol pointers sorted by value */
-	uint_t dm_symfree;	/* index of next free hash element */
-	uint_t dm_nsymbuckets;	/* number of elements in bucket array */
-	uint_t dm_nsymelems;	/* number of elements in hash table */
-	uint_t dm_asrsv;	/* actual reserved size of dm_asmap */
-	uint_t dm_aslen;	/* number of entries in dm_asmap */
 } dt_module_t;
 
 /* Handle-wide address index.  order preserves module-list precedence. */
