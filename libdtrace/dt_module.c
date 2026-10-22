@@ -270,11 +270,11 @@ static dt_htab_ops_t dt_module_htab_ops = {
 };
 
 /*
- * Symbol table management for userspace modules, via ELF parsing.
+ * Symbol table management for ELF-backed modules.
  */
 
 static void
-dt_module_symhash_insert(dt_module_t *dmp, const char *name, uint_t id)
+dt_module_symhash_insert(dt_module_symbols_t *dmp, const char *name, uint_t id)
 {
 	dt_modsym_t *dsp = &dmp->dm_symchains[dmp->dm_symfree];
 	uint_t h;
@@ -321,6 +321,56 @@ dt_module_symgelf64(const Elf64_Sym *src, GElf_Sym *dst)
 #define BITS 64
 #include <dt_symbol_modops.h>
 #undef BITS
+
+/*
+ * Keep the ELF tables independent so .symtab IDs remain valid CTF IDs.
+ * Dynamic symbols occupy the public ID range following .symtab.
+ */
+static GElf_Sym *
+dt_module_symname(dt_module_t *dmp, const char *name, GElf_Sym *symp,
+    uint_t *idp)
+{
+	uint_t id;
+
+	if (dmp->dm_ops->do_symname(&dmp->dm_symbols[0], name, symp, &id)) {
+		if (idp != NULL)
+			*idp = id;
+		return symp;
+	}
+	if (dmp->dm_ops->do_symname(&dmp->dm_symbols[1], name, symp, &id)) {
+		if (idp != NULL)
+			*idp = dmp->dm_symbols[0].dm_nsymelems + id;
+		return symp;
+	}
+	return NULL;
+}
+
+static GElf_Sym *
+dt_module_symaddr(dt_module_t *dmp, GElf_Addr addr, GElf_Sym *symp,
+    uint_t *idp)
+{
+	uint_t id;
+
+	if (dmp->dm_ops->do_symaddr(&dmp->dm_symbols[0], addr, symp, &id)) {
+		if (idp != NULL)
+			*idp = id;
+		return symp;
+	}
+	if (dmp->dm_ops->do_symaddr(&dmp->dm_symbols[1], addr, symp, &id)) {
+		if (idp != NULL)
+			*idp = dmp->dm_symbols[0].dm_nsymelems + id;
+		return symp;
+	}
+	return NULL;
+}
+
+static const char *
+dt_module_symstr(dt_module_t *dmp, uint_t id, const GElf_Sym *sym)
+{
+	int t = id >= dmp->dm_symbols[0].dm_nsymelems;
+
+	return (const char *)dmp->dm_symbols[t].dm_strtab.cts_data + sym->st_name;
+}
 
 dt_module_t *
 dt_module_create(dtrace_hdl_t *dtp, const char *name)
@@ -777,6 +827,73 @@ static void *dt_ctf_uncompress(dt_module_t *dmp, ctf_sect_t *ctsp)
 	return NULL;
 }
 
+/* Load a symbol table and its linked string table, including stripped ELFs. */
+static int
+dt_module_load_symbols(dtrace_hdl_t *dtp, dt_module_t *dmp,
+    dt_module_symbols_t *syms, uint_t type)
+{
+	Elf_Scn *scn = NULL, *strscn;
+	Elf_Data *data, *strdata;
+	GElf_Shdr sh, strsh;
+	size_t entsize = dmp->dm_ops == &dt_modops_64 ?
+	    sizeof(Elf64_Sym) : sizeof(Elf32_Sym);
+
+	while ((scn = elf_nextscn(dmp->dm_elf, scn)) != NULL) {
+		if (gelf_getshdr(scn, &sh) == NULL || sh.sh_type != type)
+			continue;
+
+		if (sh.sh_entsize != entsize || sh.sh_size % entsize != 0 ||
+		    sh.sh_size / entsize >= UINT_MAX ||
+		    (strscn = elf_getscn(dmp->dm_elf, sh.sh_link)) == NULL ||
+		    gelf_getshdr(strscn, &strsh) == NULL ||
+		    strsh.sh_type != SHT_STRTAB ||
+		    (data = elf_getdata(scn, NULL)) == NULL ||
+		    (strdata = elf_getdata(strscn, NULL)) == NULL ||
+		    data->d_size != sh.sh_size || strdata->d_size != strsh.sh_size ||
+		    (data->d_size != 0 && data->d_buf == NULL) ||
+		    (strdata->d_size != 0 && strdata->d_buf == NULL))
+			return dt_set_errno(dtp, EDT_NOMOD);
+
+		syms->dm_symtab.cts_name = type == SHT_SYMTAB ? ".symtab" : ".dynsym";
+		syms->dm_symtab.cts_data = data->d_buf;
+		syms->dm_symtab.cts_size = data->d_size;
+		syms->dm_symtab.cts_entsize = entsize;
+		syms->dm_strtab.cts_name = type == SHT_SYMTAB ? ".strtab" : ".dynstr";
+		syms->dm_strtab.cts_data = strdata->d_buf;
+		syms->dm_strtab.cts_size = strdata->d_size;
+#ifndef HAVE_LIBCTF
+		syms->dm_symtab.cts_type = type;
+		syms->dm_strtab.cts_type = SHT_STRTAB;
+#endif
+		syms->dm_nsymelems = data->d_size / entsize;
+		if (syms->dm_nsymelems == 0)
+			return 0;
+
+		syms->dm_nsymbuckets = _dtrace_strbuckets;
+		syms->dm_symfree = 1;
+		syms->dm_symbuckets = calloc(syms->dm_nsymbuckets, sizeof(uint_t));
+		syms->dm_symchains = calloc((size_t)syms->dm_nsymelems + 1,
+		    sizeof(dt_modsym_t));
+		if (syms->dm_symbuckets == NULL || syms->dm_symchains == NULL)
+			return dt_set_errno(dtp, EDT_NOMEM);
+
+		syms->dm_asrsv = dmp->dm_ops->do_syminit(syms);
+		if (syms->dm_asrsv != 0) {
+			syms->dm_asmap = calloc(syms->dm_asrsv, sizeof(void *));
+			if (syms->dm_asmap == NULL)
+				return dt_set_errno(dtp, EDT_NOMEM);
+			dmp->dm_ops->do_symsort(syms);
+		}
+
+		dt_dprintf("loaded %s [%s] (%u symbols, %u addresses)\n",
+		    dmp->dm_name, syms->dm_symtab.cts_name,
+		    syms->dm_symfree - 1, syms->dm_aslen);
+		return 0;
+	}
+
+	return 0;
+}
+
 static int
 dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 {
@@ -864,75 +981,22 @@ dt_module_load(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		return 0;
 	}
 
-	dmp->dm_symtab.cts_name = ".symtab";
-#ifndef HAVE_LIBCTF
-	dmp->dm_symtab.cts_type = SHT_SYMTAB;
-	dmp->dm_symtab.cts_flags = 0;
-	dmp->dm_symtab.cts_offset = 0;
-#endif
-	dmp->dm_symtab.cts_data = NULL;
-	dmp->dm_symtab.cts_size = 0;
-	dmp->dm_symtab.cts_entsize = dmp->dm_ops == &dt_modops_64 ?
-	    sizeof(Elf64_Sym) : sizeof(Elf32_Sym);
-
-	dmp->dm_strtab.cts_name = ".strtab";
-#ifndef HAVE_LIBCTF
-	dmp->dm_strtab.cts_type = SHT_STRTAB;
-	dmp->dm_strtab.cts_flags = 0;
-	dmp->dm_strtab.cts_offset = 0;
-#endif
-	dmp->dm_strtab.cts_data = NULL;
-	dmp->dm_strtab.cts_size = 0;
-	dmp->dm_strtab.cts_entsize = 0;
-
-	/*
-	 * Now load the module's symbol and string table sections.
-	 */
-	if (dt_module_load_sect(dtp, dmp, &dmp->dm_symtab) == -1 ||
-	    dt_module_load_sect(dtp, dmp, &dmp->dm_strtab) == -1) {
-		dt_module_clear_elf(dmp);
+	/* Cached CTF does not supply the ELF symbols of an unloaded module. */
+	if (dmp->dm_elf == NULL && dt_module_init_elf(dtp, dmp) != 0)
 		return -1; /* dt_errno is set for us */
+
+	if (dt_module_load_symbols(dtp, dmp, &dmp->dm_symbols[0],
+	    SHT_SYMTAB) == -1 ||
+	    dt_module_load_symbols(dtp, dmp, &dmp->dm_symbols[1],
+	    SHT_DYNSYM) == -1) {
+		dt_module_clear_elf(dmp);
+		return -1;
 	}
 
-	/*
-	 * Allocate the hash chains and hash buckets for symbol name lookup.
-	 * This is relatively simple since the symbol table is of fixed size
-	 * and is known in advance.  We allocate one extra element since we
-	 * use element indices instead of pointers and zero is our sentinel.
-	 */
-	dmp->dm_nsymelems =
-	    dmp->dm_symtab.cts_size / dmp->dm_symtab.cts_entsize;
-
-	dmp->dm_nsymbuckets = _dtrace_strbuckets;
-	dmp->dm_symfree = 1;		/* first free element is index 1 */
-
-	dmp->dm_symbuckets = malloc(sizeof(uint_t) * dmp->dm_nsymbuckets);
-	dmp->dm_symchains = malloc(sizeof(dt_modsym_t) * dmp->dm_nsymelems + 1);
-
-	if (dmp->dm_symbuckets == NULL || dmp->dm_symchains == NULL)
+	/* Keep the combined public symbol ID space representable. */
+	if (dmp->dm_symbols[1].dm_nsymelems >
+	    UINT_MAX - dmp->dm_symbols[0].dm_nsymelems)
 		goto oom;
-
-	memset(dmp->dm_symbuckets, 0, sizeof(uint_t) * dmp->dm_nsymbuckets);
-	memset(dmp->dm_symchains, 0, sizeof(dt_modsym_t) * dmp->dm_nsymelems
-	    + 1);
-
-	/*
-	 * Iterate over the symbol table data buffer and insert each symbol
-	 * name into the name hash if the name and type are valid.  Then
-	 * allocate the address map, fill it in, and sort it.
-	 */
-	dmp->dm_asrsv = dmp->dm_ops->do_syminit(dmp);
-
-	dt_dprintf("hashed %s [%s] (%u symbols)\n",
-	    dmp->dm_name, dmp->dm_symtab.cts_name, dmp->dm_symfree - 1);
-
-	if ((dmp->dm_asmap = malloc(sizeof(void *) * dmp->dm_asrsv)) == NULL)
-		goto oom;
-
-	dmp->dm_ops->do_symsort(dmp);
-
-	dt_dprintf("sorted %s [%s] (%u symbols)\n",
-	    dmp->dm_name, dmp->dm_symtab.cts_name, dmp->dm_aslen);
 
 	dmp->dm_flags |= DT_DM_LOADED;
 	return 0;
@@ -949,6 +1013,7 @@ dt_module_getctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 {
 	const char *parent;
 	int model;
+	dt_module_symbols_t *syms;
 
 	if (!(dmp->dm_flags & DT_DM_LOADED))
 		if (dt_module_load(dtp, dmp) != 0)
@@ -981,12 +1046,14 @@ dt_module_getctf(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		return NULL;
 	}
 
+	syms = &dmp->dm_symbols[dmp->dm_symbols[0].dm_nsymelems == 0];
 	if (dmp->dm_flags & DT_DM_KERNEL)
 		dmp->dm_ctfp = ctf_bufopen(&dmp->dm_ctdata, NULL, NULL,
 		    &dtp->dt_ctferr);
 	else
 		dmp->dm_ctfp = ctf_bufopen(&dmp->dm_ctdata,
-		    &dmp->dm_symtab, &dmp->dm_strtab, &dtp->dt_ctferr);
+		    &syms->dm_symtab, &syms->dm_strtab,
+		    &dtp->dt_ctferr);
 
 	if (dmp->dm_ctfp == NULL) {
 		dt_dprintf("ctf loading for module %s failed: error: %s\n",
@@ -1027,23 +1094,14 @@ dt_module_clear_elf(dt_module_t *dmp)
 	dmp->dm_ctdata_data = NULL;
 
 	memset(&dmp->dm_ctdata, 0, sizeof(ctf_sect_t));
-	memset(&dmp->dm_symtab, 0, sizeof(ctf_sect_t));
-	memset(&dmp->dm_strtab, 0, sizeof(ctf_sect_t));
+	for (int i = 0; i < 2; i++) {
+		dt_module_symbols_t *syms = &dmp->dm_symbols[i];
 
-	free(dmp->dm_symbuckets);
-	dmp->dm_symbuckets = NULL;
-
-	free(dmp->dm_symchains);
-	dmp->dm_symchains = NULL;
-
-	free(dmp->dm_asmap);
-	dmp->dm_asmap = NULL;
-
-	dmp->dm_symfree = 0;
-	dmp->dm_nsymbuckets = 0;
-	dmp->dm_nsymelems = 0;
-	dmp->dm_asrsv = 0;
-	dmp->dm_aslen = 0;
+		free(syms->dm_symbuckets);
+		free(syms->dm_symchains);
+		free(syms->dm_asmap);
+		memset(syms, 0, sizeof(*syms));
+	}
 
 	elf_end(dmp->dm_elf);
 	dmp->dm_elf = NULL;
@@ -1079,7 +1137,9 @@ dt_module_extern(dtrace_hdl_t *dtp, dt_module_t *dmp,
 	uint_t id;
 
 	if (dmp->dm_extern == NULL && (dmp->dm_extern = dt_idhash_create(
-	    "extern", NULL, dmp->dm_nsymelems, UINT_MAX)) == NULL) {
+	    "extern", NULL,
+	    dmp->dm_symbols[0].dm_nsymelems +
+	    dmp->dm_symbols[1].dm_nsymelems, UINT_MAX)) == NULL) {
 		dt_set_errno(dtp, EDT_NOMEM);
 		return NULL;
 	}
@@ -2315,11 +2375,10 @@ dtrace_lookup_by_name(dtrace_hdl_t *dtp, const char *object, const char *name,
 		} else {
 			uint_t id;
 
-			if (dmp->dm_ops->do_symname(dmp, name, symp, &id) != NULL) {
+			if (dt_module_symname(dmp, name, symp, &id) != NULL) {
 				if (sip != NULL) {
 					sip->object = dmp->dm_name;
-					sip->name = (const char *)
-					    dmp->dm_strtab.cts_data + symp->st_name;
+					sip->name = dt_module_symstr(dmp, id, symp);
 					sip->id = id;
 				}
 				return 0;
@@ -2494,13 +2553,11 @@ dtrace_lookup_by_addr(dtrace_hdl_t *dtp, GElf_Addr addr,
 	if (dt_module_load(dtp, dmp) == -1)
 		return -1; /* dt_errno is set for us */
 
-	if (dmp->dm_flags & DT_DM_KERNEL) {
+	if ((dmp->dm_flags & DT_DM_KERNEL) &&
+	    !(dmp->dm_flags & DT_DM_KERN_UNLOADED)) {
 		dt_symbol_t *dt_symp;
 
-		/*
-		 * This is probably a non-loaded kernel module.  Looking
-		 * anything up by address in this case is hopeless.
-		 */
+		/* Loaded kernel modules use runtime addresses from /proc. */
 		if (!dmp->dm_kernsyms)
 			return dt_set_errno(dtp, EDT_NOSYMADDR);
 
@@ -2521,7 +2578,7 @@ dtrace_lookup_by_addr(dtrace_hdl_t *dtp, GElf_Addr addr,
 		return 0;
 	} else {
 		if (symp != NULL) {
-			if (dmp->dm_ops->do_symaddr(dmp, addr, symp, &id) == NULL)
+			if (dt_module_symaddr(dmp, addr, symp, &id) == NULL)
 				return dt_set_errno(dtp, EDT_NOSYMADDR);
 		}
 
@@ -2529,8 +2586,7 @@ dtrace_lookup_by_addr(dtrace_hdl_t *dtp, GElf_Addr addr,
 			sip->object = dmp->dm_name;
 
 			if (symp != NULL) {
-				sip->name = (const char *)
-				    dmp->dm_strtab.cts_data + symp->st_name;
+				sip->name = dt_module_symstr(dmp, id, symp);
 				sip->id = id;
 			} else {
 				sip->name = NULL;
@@ -2712,20 +2768,33 @@ dt_module_sym_iter(const dt_module_t *dmp, proc_sym_f *func, void *arg)
 	uint_t		i;
 	int		rv = 0;
 
-	for (i = 0; i < dmp->dm_aslen; i++) {
-		const char	*name;
+	for (int t = 0; t < 2; t++) {
+		const dt_module_symbols_t *syms = &dmp->dm_symbols[t];
 
-		if (dmp->dm_ops == &dt_modops_64)
-			dt_module_symgelf64(
-			    ((const Elf64_Sym **)dmp->dm_asmap)[i], &sym);
-		else
-			dt_module_symgelf32(
-			    ((const Elf32_Sym **)dmp->dm_asmap)[i], &sym);
+		for (i = 0; i < syms->dm_aslen; i++) {
+			const char *name;
 
-		name = (const char *)dmp->dm_strtab.cts_data + sym.st_name;
+			if (dmp->dm_ops == &dt_modops_64)
+				dt_module_symgelf64(
+				    ((const Elf64_Sym **)syms->dm_asmap)[i], &sym);
+			else
+				dt_module_symgelf32(
+				    ((const Elf32_Sym **)syms->dm_asmap)[i], &sym);
 
-		if ((rv = func(arg, &sym, name)) != 0)
-			break;
+			name = (const char *)syms->dm_strtab.cts_data + sym.st_name;
+
+			/* Do not report symbols already covered by .symtab. */
+			if (t != 0) {
+				GElf_Sym primary;
+
+				if (dmp->dm_ops->do_symname(
+				    &dmp->dm_symbols[0],
+				    name, &primary, NULL) != NULL)
+					continue;
+			}
+			if ((rv = func(arg, &sym, name)) != 0)
+				return rv;
+		}
 	}
 
 	return rv;

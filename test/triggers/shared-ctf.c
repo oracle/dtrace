@@ -229,6 +229,12 @@ check_source(const char *ctfpath, const char *btfpath, int archived,
 			CHECK(dtrace_lookup_by_type(dtp, "vmlinux", "module_test_int", &ti) == 0);
 			CHECK(ctf_lookup_by_name(parent, "module_test_int") == CTF_ERR);
 		} else {
+			GElf_Sym sym;
+
+			/* Inherited BTF must not make an absent ELF module loadable. */
+			CHECK(dtrace_lookup_by_name(dtp, "shared_ctf_test_absent",
+			    "missing_symbol", &sym, NULL) == -1);
+
 			/* A module without local BTF must import the same parent. */
 			CHECK((child = dt_module_create(dtp, "shared_ctf_test_child")) != NULL);
 			child->dm_flags |= DT_DM_KERNEL;
