@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <port.h>
 
 #include <zlib.h>
@@ -412,6 +413,50 @@ dt_module_create(dtrace_hdl_t *dtp, const char *name)
 	return dmp;
 }
 
+/* Create a userspace module using an already resolved pathname. */
+static dt_module_t *
+dt_module_create_user_file(dtrace_hdl_t *dtp, const char *name, const char *file)
+{
+	dt_module_t	*dmp;
+	const char	*p;
+
+	/*
+	 * Use the resolved pathname as the object location, but name it based
+	 * on just the filename.
+	 */
+	p = strrchr(name, '/');
+	if (p != NULL)
+		name = p + 1;
+
+	if (strcmp(name, "shared_ctf") == 0) {
+		dt_set_errno(dtp, EEXIST);
+		return NULL;
+	}
+
+	if (strlen(name) >= DTRACE_MODNAMELEN ||
+	    strlen(file) >= sizeof(dmp->dm_file)) {
+		dt_set_errno(dtp, ENAMETOOLONG);
+		return NULL;
+	}
+
+	dmp = dt_module_lookup_by_name(dtp, name);
+	if (dmp != NULL) {
+		/* Do not turn a kernel or built-in type module into a user module. */
+		if (dmp->dm_flags & DT_DM_KERNEL || dmp == dtp->dt_cdefs ||
+		    dmp == dtp->dt_ddefs ||
+		    (dmp->dm_file[0] != '\0' && strcmp(dmp->dm_file, file) != 0)) {
+			dt_set_errno(dtp, EEXIST);
+			return NULL;
+		}
+	} else if ((dmp = dt_module_create(dtp, name)) == NULL) {
+		dt_set_errno(dtp, EDT_NOMEM);
+		return NULL;
+	}
+
+	strlcpy(dmp->dm_file, file, sizeof(dmp->dm_file));
+	return dmp;
+}
+
 /*
  * Create a userspace module for an ELF object.  Userspace module names are
  * resolved based on the LD_LIBRARY_PATH, ld.so.cache entries, and PATH.
@@ -422,7 +467,6 @@ dt_module_create_user(dtrace_hdl_t *dtp, const char *name)
 {
 	dt_module_t	*dmp;
 	char		*file = NULL;
-	char		*p;
 
 	if (name == NULL || name[0] == '\0') {
 		dt_set_errno(dtp, EINVAL);
@@ -454,46 +498,68 @@ dt_module_create_user(dtrace_hdl_t *dtp, const char *name)
 		}
 	}
 
-	/*
-	 * Use the resolved pathname as the object location, but name it based
-	 * on just the filename.
-	 */
-	p = strrchr(name, '/');
-	if (p != NULL)
-		name = p + 1;
-
-	if (strcmp(name, "shared_ctf") == 0) {
-		dt_set_errno(dtp, EEXIST);
-		goto fail;
-	}
-
-	if (strlen(name) >= DTRACE_MODNAMELEN ||
-	    strlen(file) >= sizeof(dmp->dm_file)) {
-		dt_set_errno(dtp, ENAMETOOLONG);
-		goto fail;
-	}
-
-	dmp = dt_module_lookup_by_name(dtp, name);
-	if (dmp != NULL) {
-		/* Do not turn a kernel or built-in type module into a user module. */
-		if (dmp->dm_flags & DT_DM_KERNEL || dmp == dtp->dt_cdefs ||
-		    dmp == dtp->dt_ddefs ||
-		    (dmp->dm_file[0] != '\0' && strcmp(dmp->dm_file, file) != 0)) {
-			dt_set_errno(dtp, EEXIST);
-			goto fail;
-		}
-	} else if ((dmp = dt_module_create(dtp, name)) == NULL) {
-		dt_set_errno(dtp, EDT_NOMEM);
-		goto fail;
-	}
-
-	strlcpy(dmp->dm_file, file, sizeof(dmp->dm_file));
+	dmp = dt_module_create_user_file(dtp, name, file);
 	free(file);
 	return dmp;
+}
 
-fail:
-	free(file);
-	return NULL;
+/*
+ * Discover user modules matching a pattern and call func once for each match,
+ * including modules already known to the handle.  A nonzero callback result
+ * stops iteration and is returned to the caller.  The callback may remove the
+ * current module (for example, if loading it finds an invalid ELF object).
+ */
+int
+dt_module_user_iter(dtrace_hdl_t *dtp, const char *pattern, dt_module_f *func,
+    void *arg)
+{
+	dt_path_t	*path;
+	dt_module_t	*dmp, *next;
+	int		rc;
+
+	if (dt_list_empty(&dtp->dt_user_path) && dt_user_path_init(dtp) == -1)
+		return -1;
+
+	for (path = dt_list_next(&dtp->dt_user_path); path != NULL;
+	     path = dt_list_next(path)) {
+		DIR		*dir = opendir(path->str);
+		struct dirent	*ent;
+
+		if (dir == NULL)
+			continue;
+
+		while ((ent = readdir(dir)) != NULL) {
+			char	*file;
+
+			if (strcmp(ent->d_name, ".") == 0 ||
+			    strcmp(ent->d_name, "..") == 0 ||
+			    !dt_gmatch(ent->d_name, pattern) ||
+			    dt_module_lookup_by_name(dtp, ent->d_name) != NULL)
+				continue;
+
+			if (asprintf(&file, "%s/%s", path->str, ent->d_name) == -1) {
+				closedir(dir);
+				return dt_set_errno(dtp, ENOMEM);
+			}
+
+			if (access(file, R_OK) == 0)
+				dt_module_create_user_file(dtp, ent->d_name, file);
+			free(file);
+		}
+		closedir(dir);
+	}
+
+	for (dmp = dt_list_next(&dtp->dt_modlist); dmp != NULL; dmp = next) {
+		next = dt_list_next(dmp);
+		if ((dmp->dm_flags & DT_DM_KERNEL) || dmp->dm_file[0] == '\0' ||
+		    !dt_gmatch(dmp->dm_name, pattern))
+			continue;
+
+		if ((rc = func(dtp, dmp, arg)) != 0)
+			return rc;
+	}
+
+	return 0;
 }
 
 dt_module_t *

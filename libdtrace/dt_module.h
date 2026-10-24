@@ -16,6 +16,9 @@ extern "C" {
 
 extern dt_module_t *dt_module_create(dtrace_hdl_t *, const char *);
 extern dt_module_t *dt_module_create_user(dtrace_hdl_t *, const char *);
+typedef int dt_module_f(dtrace_hdl_t *, dt_module_t *, void *);
+extern int dt_module_user_iter(dtrace_hdl_t *, const char *, dt_module_f *,
+    void *);
 extern void dt_user_path_destroy(dtrace_hdl_t *);
 
 extern dt_module_t *dt_module_lookup_by_name(dtrace_hdl_t *, const char *);
