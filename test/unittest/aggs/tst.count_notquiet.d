@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,24 +12,24 @@
  */
 
 /* three default actions */
-BEGIN { }
-BEGIN { }
-BEGIN { }
+dtrace:::BEGIN { }
+dtrace:::BEGIN { }
+dtrace:::BEGIN { }
 
 /* one explicit action */
-BEGIN { trace("hello world"); }
+dtrace:::BEGIN { trace("hello world"); }
 
 /* ten non-data-recording actions */
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
-BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
+dtrace:::BEGIN { @a = count(); }
 
 /* exit */
-BEGIN { exit(0); }
+dtrace:::BEGIN { exit(0); }

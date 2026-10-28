@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -19,7 +19,7 @@
 #pragma D option quiet
 
 int array[5];
-BEGIN
+dtrace:::BEGIN
 {
 	array[0] = 100;
 	array[1] = 200;
@@ -39,7 +39,7 @@ BEGIN
 
 }
 
-END
+dtrace:::END
 /(array[0] != *p) || (array[1] != *(p+1)) || (array[2] != *(p+2))
     || (array[3] != *(p+3)) || (array[4] != *(p+4))/
 {

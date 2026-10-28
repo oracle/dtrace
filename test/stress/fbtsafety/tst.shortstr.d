@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -8,49 +8,49 @@
 #pragma D option quiet
 #pragma D option strsize=16
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->str = ",,,Carrots,,Barley,Oatmeal,,,,,,,,,,,,,,,,,,Beans,";
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	strtok(this->str, ",");
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->str = ",,,,,,,,,,,,,,,,,,,,,,Carrots,";
 	strtok(this->str, ",");
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	strtok(this->str, "a");
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%s\n", substr(this->str, 1, 40));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%s\n", strjoin(this->str, this->str));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->str1 = ".........................................";
 	printf("%d\n", index(this->str, this->str1));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%d\n", rindex(this->str, this->str1));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

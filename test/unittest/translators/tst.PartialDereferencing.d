@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -35,7 +35,7 @@ translator struct output_struct < struct input_struct ivar >
 struct output_struct out;
 struct input_struct in;
 
-BEGIN
+dtrace:::BEGIN
 {
 	in.ii = 100;
 	in.ic = 'z';
@@ -46,19 +46,19 @@ BEGIN
 	printf("out.oi: %d\t out.oc: %d\n", out.oi, out.oc);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(100 != out.oi) || (0 != out.oc)/
 {
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(100 == out.oi) && (0 == out.oc)/
 {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

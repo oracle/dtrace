@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,7 +15,7 @@
  */
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->i = 0;
 	self->commit = 0;
@@ -24,7 +24,7 @@ BEGIN
 	printf("Speculation ID: %d\n", var1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /var1/
 {
 	speculate(var1);
@@ -33,7 +33,7 @@ BEGIN
 	self->i++;
 }
 
-BEGIN
+dtrace:::BEGIN
 /(self->i)/
 {
 	discard(var1);
@@ -42,7 +42,7 @@ BEGIN
 	self->commit++;
 }
 
-BEGIN
+dtrace:::BEGIN
 /self->commit/
 {
 	printf("Committed a discarded buffer\n");
@@ -50,14 +50,14 @@ BEGIN
 }
 
 
-BEGIN
+dtrace:::BEGIN
 /!self->commit/
 {
 	printf("Couldn't commit a discarded buffer\n");
 	exit(1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

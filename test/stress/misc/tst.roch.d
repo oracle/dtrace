@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -52,19 +52,19 @@ fbt:::return
 	    (long long)curthread, pid, tid, (int)arg1, (int)arg0);
 }
 
-mutex_enter:adaptive-acquire
+lockstat::mutex_enter:adaptive-acquire
 {
 	printf(" %u 0x%llX %d %d lock:0x%llX", timestamp,
 	    (long long)curthread, pid, tid, arg0);
 }
 
-mutex_exit:adaptive-release
+lockstat::mutex_exit:adaptive-release
 {
 	printf(" %u 0x%llX %d %d lock:0x%llX", timestamp,
 	    (long long)curthread, pid, tid, arg0);
 }
 
-tick-1sec
+profile:::tick-1sec
 /n++ == 10/
 {
 	exit(0);

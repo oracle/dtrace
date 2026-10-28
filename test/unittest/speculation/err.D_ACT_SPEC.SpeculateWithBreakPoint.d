@@ -13,7 +13,7 @@
 #pragma D option destructive
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = 0;
 }
@@ -34,12 +34,12 @@ syscall:::
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(0);
 }
 
-END
+dtrace:::END
 {
 	exit(0);
 }

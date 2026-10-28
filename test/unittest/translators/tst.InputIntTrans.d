@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -32,7 +32,7 @@ translator struct output_struct < int idontcare >
 	myi = ((struct input_struct *)uvar)->c;
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Input type to the translator decl is different from members");
 	exit(0);

@@ -1,4 +1,4 @@
-BEGIN {
+dtrace:::BEGIN {
 	trace(timestamp);
 	exit(0);
 }

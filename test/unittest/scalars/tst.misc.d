@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,7 +17,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("\nr_cpu_ids = 0x%x\n", `nr_cpu_ids);
 	printf("ext4`ext4_dir_operations = %p\n", &ext4`ext4_dir_operations);

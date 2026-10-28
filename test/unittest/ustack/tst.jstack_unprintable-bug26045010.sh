@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -46,11 +46,11 @@ EOF
 file=out.txt
 rm -f $file
 $dtrace -q $dt_flags -n '
-BEGIN
+dtrace:::BEGIN
 {
 	printf("hello world\n");
 }
-profile-9
+profile:::profile-9
 /execname == "java" && arg1/
 {
 	jstack(4);

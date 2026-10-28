@@ -16,7 +16,7 @@
 #pragma D option quiet
 #pragma D option strsize=128
 
-BEGIN
+dtrace:::BEGIN
 {
 	/*
 	 * With no IPv6 lookup table, rodata contains only its reserved byte.
@@ -32,7 +32,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,7 +15,7 @@
 /* cut string size back a little to ease pressure on BPF verifier */
 #pragma D option strsize=144
 
-BEGIN {
+dtrace:::BEGIN {
 	x = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#";
 	y = "abcdefghijklmnopqrstuvwxyz";
 	printf(" 64 %3d\n", rindex(x, y));

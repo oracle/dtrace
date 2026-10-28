@@ -14,7 +14,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	int x;
 }

@@ -1,4 +1,4 @@
-BEGIN {
+dtrace:::BEGIN {
 	trace(probemod);
 	exit(0);
 }

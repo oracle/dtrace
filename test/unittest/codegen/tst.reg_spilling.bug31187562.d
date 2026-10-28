@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -10,7 +10,7 @@
  *	      and restore them in order to make them available for allocation.
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	a = 1000;
 	b = 200;

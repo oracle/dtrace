@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -32,7 +32,7 @@ mkdir $clientpath
 test/triggers/io-mount-nfs.sh $clientpath $serverpath
 
 $dtrace $dt_flags -c "test/triggers/doio.sh $tempfile $filesize test/triggers/io-mount-nfs.sh $clientpath $serverpath" -qs /dev/stdin <<EODTRACE
-BEGIN
+dtrace:::BEGIN
 {
 	byteswr = 0;
 	bytesrd = 0;       
@@ -50,25 +50,25 @@ io:::start
         bytesrd += args[0]->b_bufsize;
 }
 
-END
+dtrace:::END
 /byteswr >= $minsize/
 {
 	printf("wrote-expected: yes\n");
 }
 
-END
+dtrace:::END
 /byteswr < $minsize/
 {
 	printf("wrote-expected: no (%d / %d)\n", byteswr, $minsize);
 }
 
-END
+dtrace:::END
 /bytesrd >= $minsize/
 {
 	printf("read-expected: yes\n");
 }
 
-END
+dtrace:::END
 /bytesrd < $minsize/
 {
 	printf("read-expected: no (%d / %d)\n", bytesrd, $minsize);

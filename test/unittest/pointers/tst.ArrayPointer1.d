@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -69,7 +69,7 @@ enum colors {
 	BLUE
 } enum_array[6];
 
-BEGIN
+dtrace:::BEGIN
 {
 	char_var0 = &char_array[0]; char_var2 = &char_array[2];
 	short_var0 = &short_array[0]; short_var3 = &short_array[3];
@@ -130,7 +130,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(2 != ((int)char_var2 - (int)char_var0)) ||
     (6 != ((int)short_var3 - (int)short_var0)) ||
     (8 != ((int)int_var5 - (int)int_var3)) ||

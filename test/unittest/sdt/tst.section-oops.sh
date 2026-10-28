@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -38,7 +38,7 @@ pounder=$!
 
 dtrace=$1
 
-$dtrace $dt_flags -qm 'perf:ext4 { @probes[probename] = count(); } ' -n 'tick-1s { i++; }' -n 'tick-1s / i > 50 / { exit(0); }'
+$dtrace $dt_flags -qm 'perf:ext4 { @probes[probename] = count(); } ' -n 'profile:::tick-1s { i++; }' -n 'profile:::tick-1s / i > 50 / { exit(0); }'
 
 kill -9 $pounder
 wait 2>/dev/null

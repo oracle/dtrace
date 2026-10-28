@@ -1,13 +1,13 @@
 #pragma D option destructive
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = 3;
 	copyout((void *)i, 0, 5);
 	exit(1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(0);
 }

@@ -15,7 +15,7 @@
 check_dtrace_arg "$@"
 dtrace=$1
 
-out=`run_in_pidns "$dtrace" $dt_flags -qn 'BEGIN { printf("begin\n"); exit(0); }' 2>&1`
+out=`run_in_pidns "$dtrace" $dt_flags -qn 'dtrace:::BEGIN { printf("begin\n"); exit(0); }' 2>&1`
 status=$?
 
 if [ $status -ne 0 ]; then

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -137,7 +137,7 @@ while [[ $(find . -name "*@*" -print -quit | wc -l) -gt 0 ]]; do
 	modname=`echo $cmds | sed 's/^\.\///' | sed 's/@.*$//'`
 
 	# form a proper D script
-	echo "BEGIN {" > D.d
+	echo "dtrace:::BEGIN {" > D.d
 	cat $cmds >> D.d
 	echo "}" >> D.d
 

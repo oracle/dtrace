@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,7 +13,7 @@
 
 #include <endian.h>
 
-BEGIN
+dtrace:::BEGIN
 {
 	before[0] = 0x1122LL;
 	before[1] = 0x11223344LL;
@@ -30,49 +30,49 @@ BEGIN
 #endif
 }
 
-BEGIN
+dtrace:::BEGIN
 /after[0] != htons(before[0])/
 {
 	printf("%x rather than %x", htons(before[0]), after[0]);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /after[0] != ntohs(before[0])/
 {
 	printf("%x rather than %x", ntohs(before[0]), after[0]);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /after[1] != htonl(before[1])/
 {
 	printf("%x rather than %x", htonl(before[1]), after[1]);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /after[1] != ntohl(before[1])/
 {
 	printf("%x rather than %x", ntohl(before[1]), after[1]);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /after[2] != htonll(before[2])/
 {
 	printf("%x rather than %x", htonll(before[2]), after[2]);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /after[2] != ntohll(before[2])/
 {
 	printf("%x rather than %x", ntohll(before[2]), after[2]);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

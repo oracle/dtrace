@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -43,7 +43,7 @@ translator struct output_struct < struct input_struct2 *ivar2 >
 	oc = ((struct input_struct2 *)ivar2)->ic2;
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Reassignment of a struct's members with different input");
 	exit(0);

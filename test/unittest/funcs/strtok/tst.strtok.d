@@ -8,56 +8,56 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->str = ",,,Carrots,,Barley,Oatmeal,,,Beans,";
 }
 
-BEGIN
+dtrace:::BEGIN
 /(this->field = strtok(this->str, ",")) == NULL/
 {
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%s\n", this->field);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(this->field = strtok(NULL, ",")) == NULL/
 {
 	exit(2);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%s\n", this->field);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(this->field = strtok(NULL, ",")) == NULL/
 {
 	exit(3);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%s\n", this->field);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(this->field = strtok(NULL, ",")) == NULL/
 {
 	exit(4);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%s\n", this->field);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(self->a = strtok(NULL, ",")) != NULL/
 {
 	printf("unexpected field: %s\n", this->field);
@@ -72,7 +72,7 @@ struct {
 
 int i;
 
-BEGIN
+dtrace:::BEGIN
 {
 	command[i].s1 = "";
 	command[i].s2 = "";
@@ -108,7 +108,7 @@ BEGIN
 	i = 0;
 }
 
-tick-1ms
+profile:::tick-1ms
 /i < end &&
     (this->result = strtok(command[i].s1, command[i].s2)) != command[i].result/
 {
@@ -119,13 +119,13 @@ tick-1ms
 	exit(6 + i);
 }
 
-tick-1ms
+profile:::tick-1ms
 /++i == end/
 {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	printf("ERROR\n");
 	exit(1);

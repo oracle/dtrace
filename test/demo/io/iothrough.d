@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2005, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -41,7 +41,7 @@ io:::done
 	start[args[0]->b_edev, args[0]->b_blkno] = 0;
 }
 
-END
+dtrace:::END
 {
 	printa("  %s (%s)\n%@d\n", @);
 }

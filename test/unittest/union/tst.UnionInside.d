@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -45,7 +45,7 @@ union OuterMost {
 } OMost;
 
 
-BEGIN
+dtrace:::BEGIN
 {
 
 	OMost.OMore.O.I.IMore.IMost.position = 5;
@@ -57,7 +57,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /'e' != OMost.OMore.O.I.IMore.IMost.content/
 {
 	exit(1);

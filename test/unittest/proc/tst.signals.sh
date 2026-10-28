@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -106,7 +106,7 @@ for signal in $(seq 1 31); do
     proc_pid=$!
 
     DTRACE_DEBUG=t $dtrace $dt_flags -xquiet -p $! \
-                -n 'tick-5s { exit(0); }' \
+                -n 'profile:::tick-5s { exit(0); }' \
                 2> $DIRNAME/dtrace.out &
     dt_pid=$!
 

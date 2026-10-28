@@ -1,6 +1,6 @@
 /* @@trigger: open */
 
-::open:entry
+syscall::open:entry
 {
     self->data = copyin(arg0, 8);
     self->l = *(uint64_t *)self->data;

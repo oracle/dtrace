@@ -11,7 +11,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(foo`);
 	exit(0);

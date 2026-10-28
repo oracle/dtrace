@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -20,31 +20,31 @@ mkdir -p $DIRNAME
 cd $DIRNAME
 
 $dtrace $dt_flags -xdisasm=8 -Sqs /dev/stdin << EOT &> D.out
-BEGIN
+dtrace:::BEGIN
 {
 	x = (int *)64;
 	y = *x;                       /* 1st ERROR */
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (int *)64;
 	y = *x;                       /* 2nd ERROR */
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (int *)64;
 	y = *x;                       /* 3rd ERROR */
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (int *)64;
 	y = *x;                       /* 4th ERROR */
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

@@ -13,7 +13,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%p\n", &(*(struct cgroup_root *)&`cgrp_dfl_root).cgrp.self);
 	printf("%p\n", &(*(struct cgroup_root *)&`cgrp_dfl_root).cgrp.self.cgroup->self);

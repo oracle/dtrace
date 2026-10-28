@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2005, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,7 +13,7 @@ io:::start
 	@[execname, args[2]->fi_dirname] = count();
 }
 
-END
+dtrace:::END
 {
 	printf("%20s %51s %5s\n", "WHO", "WHERE", "COUNT");
 	printa("%20s %51s %5@d\n", @);

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -22,7 +22,7 @@ struct foo {
 	int b:3;
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(offsetof(struct foo, b));
 	exit(0);

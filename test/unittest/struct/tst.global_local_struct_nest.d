@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -41,7 +41,7 @@ this struct coords   p, q, r;
      struct particle A, B, C;
 this struct particle a, b, c;
 
-BEGIN {
+dtrace:::BEGIN {
 	/* Initialize the second variables. */
 	      L            = 11;
 	this->l            = 12;
@@ -88,7 +88,7 @@ BEGIN {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

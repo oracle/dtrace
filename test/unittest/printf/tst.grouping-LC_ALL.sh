@@ -12,7 +12,7 @@ for mylocale in C en_US.utf8; do
 	export LC_ALL=$mylocale
 
 	$dtrace $dt_flags -qs /dev/stdin << EOF
-	BEGIN
+	dtrace:::BEGIN
 	{
 		printf("%'d\n", 123456789);
 		exit(0);

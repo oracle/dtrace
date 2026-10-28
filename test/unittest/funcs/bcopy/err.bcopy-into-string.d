@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,7 +11,7 @@
  * SECTION: Actions and Subroutines/bcopy()
  */
 
-BEGIN {
+dtrace:::BEGIN {
 	s = (string)alloca(10);
 	bcopy(probename, s, 5);
 	exit(0);

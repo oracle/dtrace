@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
 
 struct iphdr	iph;
 
-BEGIN
+dtrace:::BEGIN
 {
 	iph.ihl = 5;
 	iph.version = 4;
@@ -27,7 +27,7 @@ BEGIN
 	exit(iph.ihl == 5 && iph.version == 4 ? 0 : 1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

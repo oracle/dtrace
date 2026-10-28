@@ -11,7 +11,7 @@
 #include <dtrace/dif_defines.h>
 
 #define INTFUNC(x)			\
-	BEGIN				\
+	dtrace:::BEGIN				\
 	/*DSTYLED*/			\
 	{				\
 		this->ival = (long)(x);	\
@@ -20,7 +20,7 @@
 	}
 
 #define AINTFUNC(x)			\
-	BEGIN				\
+	dtrace:::BEGIN				\
 	/*DSTYLED*/			\
 	{				\
 		subr++;			\
@@ -29,7 +29,7 @@
 	}
 
 #define STRFUNC(x)			\
-	BEGIN				\
+	dtrace:::BEGIN				\
 	/*DSTYLED*/			\
 	{				\
 		subr++;			\
@@ -38,7 +38,7 @@
 	}
 
 #define VOIDFUNC(x)			\
-	BEGIN				\
+	dtrace:::BEGIN				\
 	/*DSTYLED*/			\
 	{				\
 		subr++;			\
@@ -46,7 +46,7 @@
 	}
 
 #define STKFUNC(x)			\
-	BEGIN				\
+	dtrace:::BEGIN				\
 	/*DSTYLED*/			\
 	{				\
 		subr++;			\
@@ -110,13 +110,13 @@ STRFUNC(inet_ntoa6((in6_addr_t *)alloca(sizeof(in6_addr_t))))
 STKFUNC(stack(5))
 STKFUNC(ustack(5))
 
-BEGIN
+dtrace:::BEGIN
 /subr == DIF_SUBR_MAX + 1 - NUM_UNIMPLEMENTED/
 {
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("found %d subroutines, expected %d\n", subr, DIF_SUBR_MAX + 1 - NUM_UNIMPLEMENTED);
 	exit(1);

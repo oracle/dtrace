@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,13 +17,13 @@
 #pragma D option aggrate=1ms
 #pragma D option switchrate=50ms
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = 0;
 	start = timestamp;
 }
 
-tick-100ms
+profile:::tick-100ms
 /i < 20/
 {
 	@func1[i % 5] = sum(i * 100);
@@ -31,7 +31,7 @@ tick-100ms
 	i++;
 }
 
-tick-100ms
+profile:::tick-100ms
 /i == 20/
 {
 	printf("normalized data #1:\n");

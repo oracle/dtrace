@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -55,7 +55,7 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-$dtrace $dt_flags -c ./test -n 'test_prov$target:::go, tick-1s { exit(0); }'
+$dtrace $dt_flags -c ./test -n 'test_prov$target:::go, profile:::tick-1s { exit(0); }'
 rc=$?
 
 exit $rc

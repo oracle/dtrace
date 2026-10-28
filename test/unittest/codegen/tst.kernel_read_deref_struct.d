@@ -7,14 +7,14 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(sizeof(struct pid));
 	trace(*(struct pid *)`cad_pid);
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

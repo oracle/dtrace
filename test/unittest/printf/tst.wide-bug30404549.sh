@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2019, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -18,7 +18,7 @@ dtrace=$1
 
 # abbreviate output to a simple statement of length.  raw output is big (29M)
 $dtrace $dt_flags -qs /dev/stdin << EOF | gawk '{ print length($0); }'
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%10000000d\n", 1);
 	printf("%.10000000d\n", 1);

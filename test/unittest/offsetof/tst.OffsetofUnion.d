@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -23,7 +23,7 @@ union record {
 	char c;
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("offsetof(record, x) = %d\n", offsetof(union D`record, x));
 	printf("offsetof(record, y) = %d\n", offsetof(union D`record, y));
@@ -31,7 +31,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(0 != offsetof(union D`record, y)) && (0 != offsetof(union D`record, x)) &&
     (0 != offsetof(union D`record, c))/
 {

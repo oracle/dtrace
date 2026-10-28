@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -61,7 +61,7 @@ cat > $tmpdir/tst.ipv4remotetcp.test.pl <<-EOPERL
 EOPERL
 
 $dtrace $dt_flags -c "/usr/bin/perl $tmpdir/tst.ipv4remotetcp.test.pl" -qs /dev/stdin <<EODTRACE
-BEGIN
+dtrace:::BEGIN
 {
 	send = receive = 0;
 }
@@ -79,7 +79,7 @@ ip:::receive
 {
 	receive++;
 }
-END
+dtrace:::END
 {
 	printf("Minimum TCP events seen\n\n");
 	printf("ip:::send - %s\n", send >= 3 ? "yes" : "no");

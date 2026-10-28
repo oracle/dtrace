@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -43,7 +43,7 @@ char *fmt;
   x = +2; y = +3; printf(FMT, x + y); printf(FMT, y + x); printf("\n");
 
 #ifdef USE_AS_D_SCRIPT
-BEGIN
+dtrace:::BEGIN
 #else
 int main(int c_unused, char *v_unused)
 #endif

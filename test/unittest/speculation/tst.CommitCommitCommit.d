@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,7 @@
 #pragma D option quiet
 #pragma D option nspec=3
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = speculation();
 	j = speculation();
@@ -22,37 +22,37 @@ BEGIN
 	printf("Speculation IDs: %d %d %d\n", i, j, k);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(i);
 	printf("Speculating on id: %d\n", i);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(j);
 	printf("Speculating on id: %d\n", j);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(k);
 	printf("Speculating on id: %d\n", k);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	commit(k);
 	commit(j);
 	commit(i);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

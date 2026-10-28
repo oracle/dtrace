@@ -24,7 +24,7 @@ cd "$dir" || exit 1
 
 # Now add an empty training entry.
 PATH=$PATH: LD_LIBRARY_PATH=$LD_LIBRARY_PATH: "$dtrace" -xlinkmode=static $dt_flags -c testprobe -n '
-BEGIN
+dtrace:::BEGIN
 {
 	trace(&testprobe``main);
 	exit(0);

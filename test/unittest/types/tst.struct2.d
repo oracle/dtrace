@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -37,7 +37,7 @@ struct env_vars_64 {
 	uint64_t e3;
 };
 
-BEGIN
+dtrace:::BEGIN
 /curpsinfo->pr_dmodel == PR_MODEL_ILP32/
 {
 	e32 = (struct D`env_vars_32 *)curpsinfo->pr_envp;
@@ -49,7 +49,7 @@ BEGIN
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /curpsinfo->pr_dmodel == PR_MODEL_LP64/
 {
 	e64 = (struct D`env_vars_64 *)curpsinfo->pr_envp;

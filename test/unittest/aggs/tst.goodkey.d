@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,12 +13,12 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = 0;
 }
 
-tick-10ms
+profile:::tick-10ms
 /i != 5/
 {
 	i++;
@@ -26,7 +26,7 @@ tick-10ms
 
 }
 
-tick-10ms
+profile:::tick-10ms
 /i == 5/
 {
 	exit(0);

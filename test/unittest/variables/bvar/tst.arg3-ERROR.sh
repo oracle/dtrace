@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -28,14 +28,14 @@ function dump_files {
 # Run DTrace, also collecting disassembly.
 
 $dtrace $dt_flags -o D.out -xdisasm=8 -S -qn '
-BEGIN { nerrs = 0; }		/* dt_clause_0 */
-BEGIN { y = *((int*)64); }	/* dt_clause_1 */
-BEGIN { y = *((int*)64); }	/* dt_clause_2 */
-BEGIN { y = *((int*)64); }	/* dt_clause_3 */
-BEGIN { y = *((int*)64); }	/* dt_clause_4 */
-BEGIN { exit(0); }		/* dt_clause_5 */
+dtrace:::BEGIN { nerrs = 0; }		/* dt_clause_0 */
+dtrace:::BEGIN { y = *((int*)64); }	/* dt_clause_1 */
+dtrace:::BEGIN { y = *((int*)64); }	/* dt_clause_2 */
+dtrace:::BEGIN { y = *((int*)64); }	/* dt_clause_3 */
+dtrace:::BEGIN { y = *((int*)64); }	/* dt_clause_4 */
+dtrace:::BEGIN { exit(0); }		/* dt_clause_5 */
 
-ERROR
+dtrace:::ERROR
 {
 	/* Report the problematic PC and continue execution. */
 	printf("Error %d at %x\n", ++nerrs, arg3);

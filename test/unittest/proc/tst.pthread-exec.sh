@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -17,4 +17,4 @@ if [ $# != 1 ]; then
 fi
 
 dtrace=$1
-exec $dtrace $dt_flags -c test/triggers/proc-tst-pthread-exec -n 'BEGIN'
+exec $dtrace $dt_flags -c test/triggers/proc-tst-pthread-exec -n 'dtrace:::BEGIN'

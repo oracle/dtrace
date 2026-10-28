@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -8,7 +8,7 @@
 /* @@runtest-opts: $_pid */
 /* @@xfail: needs trigger */
 
-profile-5000
+profile:::profile-5000
 /pid == $1/
 {
 	/*
@@ -23,7 +23,7 @@ profile-5000
 	@ms = lquantize((timestamp / 1000000) % 10, 0, 10, 1);
 }
 
-tick-1sec
+profile:::tick-1sec
 /i++ >= 10/
 {
 	exit(0);

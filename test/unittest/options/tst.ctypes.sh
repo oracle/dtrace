@@ -1,14 +1,14 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
 
 dtrace=$1
 
-$dtrace $dt_flags -xctypes=$tmpdir/ctypes.ctf -n 'BEGIN { exit(0); }'
+$dtrace $dt_flags -xctypes=$tmpdir/ctypes.ctf -n 'dtrace:::BEGIN { exit(0); }'
 if [ ! -r $tmpdir/ctypes.ctf ]; then
 	echo "ERROR: No ctypes.ctf generated"
 	exit 1

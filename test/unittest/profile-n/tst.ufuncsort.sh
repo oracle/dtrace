@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -34,7 +34,7 @@ $dtrace $dt_flags -c test/triggers/profile-tst-ufuncsort -s /dev/stdin <<EOF
 	{
 		@[ufunc(arg0)] = count();
 	}
-	tick-1s
+	profile:::tick-1s
 	{
 		exit(0);
 	}

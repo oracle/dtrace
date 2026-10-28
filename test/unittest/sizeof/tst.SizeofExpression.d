@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,7 +15,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("sizeof('c') : %d\n", sizeof('c'));
 	printf("sizeof(10 * 'c') : %d\n", sizeof(10 * 'c'));
@@ -32,7 +32,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(4 != sizeof('c')) || (4 != sizeof(10 * 'c')) ||
     (4 != sizeof(100 + 12345)) || (4 != sizeof(1234567890)) ||
     (8 != sizeof(1234512345 * 1234512345 * 12345678 * 1ULL)) ||

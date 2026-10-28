@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -19,18 +19,18 @@
 #pragma D option bufpolicy=ring
 #pragma D option bufsize=16
 
-tick-10ms
+profile:::tick-10ms
 {
 	trace(0xbadbaddefec8d);
 }
 
-tick-10ms
+profile:::tick-10ms
 /0/
 {
 	trace((int)1);
 }
 
-tick-10ms
+profile:::tick-10ms
 /i++ > 20/
 {
 	exit(0);

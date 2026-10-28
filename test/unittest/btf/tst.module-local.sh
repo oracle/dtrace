@@ -43,7 +43,7 @@ PY
 
 "$dtrace" $dt_flags -e -xdebug -xctfpath="$dir/missing.ctfa" \
 	-xbtfpath="$dir" -n "
-BEGIN
+dtrace:::BEGIN
 {
 	this->local_size = sizeof(struct ${module}\`dtrace_btf_local_test);
 	this->parent_size = sizeof(struct ${module}\`task_struct);

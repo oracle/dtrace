@@ -17,13 +17,13 @@ check_dtrace_arg "$@"
 dtrace=$1
 
 out=`run_in_pidns "$dtrace" $dt_flags -qn '
-BEGIN
+dtrace:::BEGIN
 {
 	printf("begin\n");
 	exit(0);
 }
 
-END
+dtrace:::END
 {
 	printf("end\n");
 }

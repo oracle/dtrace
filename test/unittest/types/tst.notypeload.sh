@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -31,12 +31,12 @@ tiny()
 
 int64_t foo;
 
-BEGIN {
+dtrace:::BEGIN {
 	foo = 4;
 	exit(0);
 }
 
-tick-1s {
+profile:::tick-1s {
 	trace("foo");
 }
 
@@ -48,13 +48,13 @@ bigger()
     DTRACE_DEBUG=t $dtrace $dt_flags -s /dev/stdin <<EOF
 #pragma D option quiet
 
-proc::create {
+proc:::create {
 	this->pid = args[0]->pid;
 	printf("%s\n", curthread->comm);
 	exit(0);
 }
 
-tick-1s {
+profile:::tick-1s {
 	trace("foo");
 }
 

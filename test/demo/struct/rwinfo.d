@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2005, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -38,7 +38,7 @@ syscall::exit_group:entry
        exit(0);
 }
 
-END
+dtrace:::END
 {
 	printf("\n        calls  max bytes  elapsed\n");
 	printf("------  -----  ---------  -------\n");

@@ -38,7 +38,7 @@ typedef struct dqstr {
 	unsigned char *name;
 } dqstr_t;
 
-BEGIN
+dtrace:::BEGIN
 {
 	s = (D`dqstr_t *)alloca(sizeof(D`dqstr_t));
 	bcopy(&curthread->fs->root.dentry->d_name, s, sizeof(D`dqstr_t));
@@ -50,7 +50,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	printf("ERROR\n");
 	exit(1);

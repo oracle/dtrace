@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,27 +12,27 @@
  * SECTION: Speculative Tracing/Comitting a Speculation
  */
 #pragma D option quiet
-BEGIN
+dtrace:::BEGIN
 {
 	self->i = 0;
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	commit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace("This should be seen");
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

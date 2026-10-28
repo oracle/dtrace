@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -22,7 +22,7 @@
 #pragma D option flowindent=off
 #pragma D option flowindent=UnSeT
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf(".lived eht si paTmetsyS, lived eht si paTmetsyS\n");
 	exit(0);

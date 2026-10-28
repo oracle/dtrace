@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -23,11 +23,11 @@ unset _DTRACE_TESTING
 
 # Feed DTrace output into awk script to process results.
 $dtrace $dt_flags -n '
-profile-3 {
+profile:::profile-3 {
 	trace(id);
 }
 
-tick-2 {
+profile:::tick-2 {
 	exit(0);
 }
 ' | gawk '

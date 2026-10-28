@@ -1,13 +1,13 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	str = "fooeyfooeyfoo";
 	this->success = 0;
@@ -26,25 +26,25 @@ BEGIN
 	this->success = 1;
 }
 
-BEGIN
+dtrace:::BEGIN
 /!this->success/
 {
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /strchr(str, 'a') != NULL/
 {
 	exit(2);
 }
 
-BEGIN
+dtrace:::BEGIN
 /strrchr(str, 'a') != NULL/
 {
 	exit(3);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

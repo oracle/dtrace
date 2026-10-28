@@ -16,7 +16,7 @@
 
 int 0abc;
 
-BEGIN
+dtrace:::BEGIN
 {
 	0abc = 5;
 	printf("0abc is %d", 0abc);

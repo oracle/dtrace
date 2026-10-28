@@ -2,7 +2,7 @@
 
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -41,7 +41,7 @@ $testdir/server.udp.pl $local $udpport >/dev/null&
 server=$!
 disown %+
 $dtrace $dt_flags -c "$testdir/../ip/client.ip.pl udp $local $udpport" -qs /dev/stdin <<EOF 2>/dev/null
-BEGIN
+dtrace:::BEGIN
 {
 	ipsend = ipreceive = udpsend = udpreceive = 0;
 }
@@ -74,7 +74,7 @@ udp:::receive
 	udpreceive++;
 }
 
-END
+dtrace:::END
 {
 	printf("Minimum UDP events seen\n\n");
 	printf("ip:::send - %s\n", ipsend >= 1 ? "yes" : "no");

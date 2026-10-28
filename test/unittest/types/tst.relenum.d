@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -27,7 +27,7 @@ enum numbers_2 {
 	second
 };
 
-tick-1
+profile:::tick-1
 /zero >= one || second <= first || zero == second/
 {
 	printf("Shouldn't end up here (1)\n");
@@ -36,7 +36,7 @@ tick-1
 	exit(1);
 }
 
-tick-1
+profile:::tick-1
 /second < one || two > second || null == first/
 {
 	printf("Shouldn't end up here (2)\n");
@@ -45,7 +45,7 @@ tick-1
 	exit(1);
 }
 
-tick-1
+profile:::tick-1
 /first < two && second > one && one != two && zero != first/
 {
 	exit(0);

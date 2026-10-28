@@ -22,7 +22,7 @@
 		exit(1);
 	}
 
-	tick-1sec
+	profile:::tick-1sec
 	/secs++/
 	{
 		exit(0);

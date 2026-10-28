@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,7 +17,7 @@
 #pragma D option quiet
 
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = 0;
 	x = i == 0 ? "zero" : "non-zero";
@@ -27,13 +27,13 @@ BEGIN
 		(c >= 'a' && c <= 'z') ? c + 10 - 'a' : c + 10 - 'A';
 }
 
-tick-1
+profile:::tick-1
 /x == "zero" && hexval == 13/
 {
 	exit(0);
 }
 
-tick-1
+profile:::tick-1
 /x != "zero" || hexval != 13/
 {
 	exit(1);

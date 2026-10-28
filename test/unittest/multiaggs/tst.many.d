@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -8,7 +8,7 @@
 #pragma D option destructive
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 /0/
 {
 	@agg996[996] = quantize(998);
@@ -17,7 +17,7 @@ BEGIN
 	@agg999[999] = lquantize(0, -10, 10, 1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	@agg0[0] = sum(0);
 	@agg1[1] = sum(1);

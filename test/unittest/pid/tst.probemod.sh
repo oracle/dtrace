@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -37,7 +37,7 @@ for lib in $names; do
 	sleep 60 &
 	pid=$!
 	disown %+
-	$dtrace $dt_flags -n "pid$pid:$lib:malloc*:entry" -n 'tick-2s{exit(0);}'
+	$dtrace $dt_flags -n "pid$pid:$lib:malloc*:entry" -n 'profile:::tick-2s{exit(0);}'
 	status=$?
 
 	kill $pid

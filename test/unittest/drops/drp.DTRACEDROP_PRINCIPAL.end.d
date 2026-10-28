@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -9,102 +9,102 @@
 #pragma D option strsize=2k
 #pragma D option bufsize=64k
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }
 
-END
+dtrace:::END
 {
 	trace("00");
 	trace("01");
 }
 
-END
+dtrace:::END
 {
 	trace("02");
 	trace("03");
 }
 
-END
+dtrace:::END
 {
 	trace("04");
 	trace("05");
 }
 
-END
+dtrace:::END
 {
 	trace("06");
 	trace("07");
 }
 
-END
+dtrace:::END
 {
 	trace("08");
 	trace("09");
 }
 
-END
+dtrace:::END
 {
 	trace("10");
 	trace("11");
 }
 
-END
+dtrace:::END
 {
 	trace("12");
 	trace("13");
 }
 
-END
+dtrace:::END
 {
 	trace("14");
 	trace("15");
 }
 
-END
+dtrace:::END
 {
 	trace("16");
 	trace("17");
 }
 
-END
+dtrace:::END
 {
 	trace("18");
 	trace("19");
 }
 
-END
+dtrace:::END
 {
 	trace("20");
 	trace("21");
 }
 
-END
+dtrace:::END
 {
 	trace("22");
 	trace("23");
 }
 
-END
+dtrace:::END
 {
 	trace("24");
 	trace("25");
 }
 
-END
+dtrace:::END
 {
 	trace("26");
 	trace("27");
 }
 
-END
+dtrace:::END
 {
 	trace("28");
 	trace("29");
 }
 
-END
+dtrace:::END
 {
 	trace("30");
 	trace("31");

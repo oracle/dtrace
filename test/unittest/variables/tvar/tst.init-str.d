@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,13 +16,13 @@
 
 self string x;
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(self->x);
 	exit(1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(arg4 != 1 || arg5 != 0);
 }

@@ -13,7 +13,7 @@
  * properly.  Note that the output of this is a bash script.  When run,
  * it will give no output if the output is correct.
  */
-BEGIN
+dtrace:::BEGIN
 {
 	dir[i++] = "/foo/bar/baz";
 	dir[i++] = "/foo/bar///baz/";

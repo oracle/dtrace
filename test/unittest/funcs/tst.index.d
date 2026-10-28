@@ -17,7 +17,7 @@ struct {
 
 int i;
 
-BEGIN
+dtrace:::BEGIN
 {
 	command[i].str = "foobarbaz";
 	command[i].substr = "barbaz";
@@ -63,7 +63,7 @@ BEGIN
 	printf("BEGIN {\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /j < i && end == 0/
 {
 	command[i + k].str = command[j].str;
@@ -117,14 +117,14 @@ tick-1ms
 	j++;
 }
 
-tick-1ms
+profile:::tick-1ms
 /j == i && end == 0/
 {
 	end = k;
 	i = 0;
 }
 
-tick-1ms
+profile:::tick-1ms
 /end != 0 && i < end && !command[i].haspos/
 {
 	this->result = index(command[i].str, command[i].substr);
@@ -142,7 +142,7 @@ tick-1ms
 	printf("\t}\n\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /end != 0 && i < end && !command[i].haspos/
 {
 	this->result = rindex(command[i].str, command[i].substr);
@@ -160,7 +160,7 @@ tick-1ms
 	printf("\t}\n\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /end != 0 && i < end && command[i].haspos/
 {
 	this->result = index(command[i].str,
@@ -179,7 +179,7 @@ tick-1ms
 	printf("\t}\n\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /end != 0 && i < end && command[i].haspos/
 {
 	this->result = rindex(command[i].str,
@@ -198,7 +198,7 @@ tick-1ms
 	printf("\t}\n\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /end != 0 && ++i == end/
 {
 	printf("\texit($failed);\n}\n");

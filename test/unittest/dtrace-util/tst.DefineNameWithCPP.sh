@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -22,7 +22,7 @@ script()
 	$dtrace $dt_flags -C -D VALUE=40 -s /dev/stdin <<EOF
 	#pragma D option quiet
 
-	BEGIN
+	dtrace:::BEGIN
 	{
 		printf("Value of VALUE: %d\n", VALUE);
 		exit(0);

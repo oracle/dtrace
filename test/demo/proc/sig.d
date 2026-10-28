@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2005, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,7 +12,7 @@ proc:::signal-send
 	@[execname, stringof(args[1]->pr_fname), args[2]] = count();
 }
 
-END
+dtrace:::END
 {
 	printf("%20s %20s %12s %s\n",
 	    "SENDER", "RECIPIENT", "SIG", "COUNT");

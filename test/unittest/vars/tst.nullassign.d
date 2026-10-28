@@ -1,45 +1,45 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	lv = "Live";
 	dt = ", DTrace, ";
 	ps = "Prosper";
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	phrase = strjoin(lv, dt);
 	phrase = strjoin(phrase, lv);
 	expected = "Live, DTrace, Live";
 }
 
-BEGIN
+dtrace:::BEGIN
 /phrase != expected/
 {
 	printf("global: expected '%s', found '%s'\n", expected, phrase);
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->phrase = strjoin(ps, dt);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->phrase = strjoin(this->phrase, ps);
 	expected = "Prosper, DTrace, Prosper";
 }
 
-BEGIN
+dtrace:::BEGIN
 /this->phrase != expected/
 {
 	printf("clause-local: expected '%s', found '%s'\n",
@@ -47,27 +47,27 @@ BEGIN
 	exit(2);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	phrase = NULL;
 	this->phrase = NULL;
 }
 
-BEGIN
+dtrace:::BEGIN
 /phrase != NULL/
 {
 	printf("expected global to be NULL\n");
 	exit(3);
 }
 
-BEGIN
+dtrace:::BEGIN
 /this->phrase != NULL/
 {
 	printf("expected clause-local to be NULL\n");
 	exit(4);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

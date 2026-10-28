@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -47,7 +47,7 @@ struct OuterMost {
 
 struct OuterMost OMostCopy;
 
-BEGIN
+dtrace:::BEGIN
 {
 
 	OMost.dummy_More = 0;
@@ -81,7 +81,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(0 != OMost.dummy_More) || (1 != OMost.OMore.dummy_More) ||
     (2 != OMost.OMore.O.dummy_More) || (3 != OMost.OMore.O.I.dummy_More) ||
     (4 != OMost.OMore.O.I.IMore.dummy_More) ||
@@ -91,7 +91,7 @@ END
 	exit(1);
 }
 
-END
+dtrace:::END
 /(0 != OMostCopy.dummy_More) || (1 != OMostCopy.OMore.dummy_More) ||
     (2 != OMostCopy.OMore.O.dummy_More) ||
     (3 != OMostCopy.OMore.O.I.dummy_More) ||

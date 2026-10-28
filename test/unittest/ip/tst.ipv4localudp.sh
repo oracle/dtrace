@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -34,7 +34,7 @@ dtrace=$1
 testdir="$(dirname $_test)"
 local=127.0.0.1
 $dtrace $dt_flags -c "$testdir/perlping.pl udp $local" -qs /dev/stdin <<EOF
-BEGIN
+dtrace:::BEGIN
 {
 	send = receive = 0;
 }
@@ -53,7 +53,7 @@ ip:::receive
 	receive++;
 }
 
-END
+dtrace:::END
 {
 	printf("Minimum UDP events seen\n\n");
 	printf("ip:::send - %s\n", send >= 1 ? "yes" : "no");

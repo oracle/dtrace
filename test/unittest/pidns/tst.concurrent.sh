@@ -22,11 +22,11 @@ run_in_pidns bash -s "$dtrace" "$DIRNAME" <<'EOS'
 dtrace=$1
 dir=$2
 
-"$dtrace" $dt_flags -qn 'BEGIN { printf("A\n"); exit(0); }' \
+"$dtrace" $dt_flags -qn 'dtrace:::BEGIN { printf("A\n"); exit(0); }' \
     > "$dir/a.out" 2> "$dir/a.err" &
 p1=$!
 
-"$dtrace" $dt_flags -qn 'BEGIN { printf("B\n"); exit(0); }' \
+"$dtrace" $dt_flags -qn 'dtrace:::BEGIN { printf("B\n"); exit(0); }' \
     > "$dir/b.out" 2> "$dir/b.err" &
 p2=$!
 

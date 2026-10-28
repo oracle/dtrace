@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -27,7 +27,7 @@ syscall::ioctl:entry
 	    (i & 1) ? 8 : 18)] = count();
 }
 
-END
+dtrace:::END
 {
 	printa("%s\n", @);
 }

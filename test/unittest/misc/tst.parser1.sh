@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -18,7 +18,7 @@ chkfile=$tmpfile.check
 # Run DTrace.
 
 $dtrace $dt_flags -xtree=1 -e -n '
-BEGIN
+dtrace:::BEGIN
 {
 	x = 1234;
 	printf("%d\n", x);
@@ -36,7 +36,7 @@ fi
 # Generate check file.
 
 cat > $chkfile << EOF
-      PDESC :::BEGIN [0]
+      PDESC dtrace:::BEGIN [0]
     CTXATTR [i/i/u]
     ACTION
       D EXPRESSION attr=[s/s/c]
@@ -80,7 +80,7 @@ EOF
 
 gawk '
 # Look for the BEGIN clause.
-/PDESC :::BEGIN / {
+/PDESC dtrace:::BEGIN / {
         # Print until we get the next clause.
         while (index($0, "Parse tree") == 0) {
                 print;

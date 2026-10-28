@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -9,7 +9,7 @@
 
 uint8_t ibaddr[20];
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->buf_eth = (uint64_t *)alloca(sizeof(uint64_t));
 

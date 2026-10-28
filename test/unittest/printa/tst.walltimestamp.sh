@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -20,7 +20,7 @@ $dtrace $dt_flags -s /dev/stdin <<EOF
 #pragma D option quiet
 #pragma D option destructive
 
-BEGIN
+dtrace:::BEGIN
 {
 	@foo = min(1075064400 * 1000000000);
 	@bar = max(walltimestamp);
@@ -33,7 +33,7 @@ BEGIN
 
 	exit(0);
 }
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

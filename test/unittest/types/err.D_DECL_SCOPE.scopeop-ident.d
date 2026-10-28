@@ -13,7 +13,7 @@
 
 int foo`bar;
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(1);
 }

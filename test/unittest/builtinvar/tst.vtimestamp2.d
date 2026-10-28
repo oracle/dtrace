@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
 #pragma D option quiet
 #pragma D option destructive
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->ts = timestamp;
 	self->vt = vtimestamp;
@@ -29,14 +29,14 @@ proc:::create
 	exit(0);
 }
 
-END
+dtrace:::END
 {
 	exit((vtimestamp == 0)
 		? -1
 		: (vtimestamp - self->vt) <= (timestamp - self->ts) ? 0 : 1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -20,13 +20,13 @@ dtrace_script()
  	* 
  	*/
 
-	BEGIN 
+	dtrace:::BEGIN
 	{
 		chill(500000001);
 		exit(1);
 	}
 
-	ERROR
+	dtrace:::ERROR
 	{
 		exit(1)
 	}

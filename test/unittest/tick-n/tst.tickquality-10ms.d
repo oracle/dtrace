@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	last = timestamp;
 
@@ -27,7 +27,7 @@ BEGIN
 	ngood = 0;
 	nbad = 0;
 }
-tick-10msec
+profile:::tick-10msec
 {
 	t = timestamp;
 	delta = t - last;
@@ -40,13 +40,13 @@ tick-10msec
 	/* delta above toohigh is bad */
 	nbad += delta < toohigh ? 0 : 1;
 }
-tick-10msec
+profile:::tick-10msec
 /delta > toohigh/
 {
 	printf("too high:\n%15d (observed)\n%15d (tolerated)\n",
 	   delta, toohigh);
 }
-tick-25sec
+profile:::tick-25sec
 {
 	printf("%d counts; %d good and %d bad\n", ntotal, ngood, nbad);
 	printf("%s\n", nbad ? "ERROR" : "success");

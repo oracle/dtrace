@@ -1,29 +1,29 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->spec = speculation();
 	speculate(self->spec);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->one = 1;
 	this->two = 2;
 	speculate(self->spec);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(self->spec);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

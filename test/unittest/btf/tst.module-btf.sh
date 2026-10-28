@@ -27,7 +27,7 @@ fi
 
 "$dtrace" $dt_flags -e -xdebug -xctfpath="$dir/missing.ctfa" \
 	-xbtfpath="$dir" -n "
-BEGIN
+dtrace:::BEGIN
 {
 	this->size = sizeof(struct ${module}\`task_struct);
 }" >"$dir/output" 2>&1

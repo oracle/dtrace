@@ -16,7 +16,7 @@
 #pragma D option quiet
 #pragma D option strsize=128
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->addr = (struct in6_addr *)alloca(sizeof(struct in6_addr));
 	this->addr->in6_u.u6_addr32[0] = 0;
@@ -35,7 +35,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,18 +1,18 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
 
 /* @@xfail: not yet ported */
 
-interrupt-start
+sdt:::interrupt-start
 {
 	self->ts = vtimestamp;
 }
 
-interrupt-complete
+sdt:::interrupt-complete
 /self->ts/
 {
 	this->devi = (struct dev_info *)arg0;

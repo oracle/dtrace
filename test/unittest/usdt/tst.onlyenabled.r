@@ -15,7 +15,7 @@ run with dtrace and with the USDT probe
 USDT probe is enabled
 
 -- @@stderr --
-dtrace: description 'BEGIN
+dtrace: description 'dtrace:::BEGIN
                                 ' matched 1 probe
 dtrace: description 'test_prov$target:::go
                                 ' matched 1 probe

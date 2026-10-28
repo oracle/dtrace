@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -21,7 +21,7 @@ struct bitRecord{
 	int c : 31;
 } var;
 
-BEGIN
+dtrace:::BEGIN
 {
 	var.a = 256;
 	var.b = 65536;
@@ -32,7 +32,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(0 != var.a) || (0 != var.b) || (0 != var.c)/
 {
 	exit(1);

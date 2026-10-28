@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -36,7 +36,7 @@ cpc:::cpu_clock-all-PERIOD
 	lasttime[cpu] = currtime[cpu];
 }
 
-tick-5s
+profile:::tick-5s
 {
 	exit(0);
 }

@@ -2,4 +2,4 @@
                           :BEGIN 
 
 -- @@stderr --
-dtrace: description 'BEGIN ' matched 1 probe
+dtrace: description 'dtrace:::BEGIN ' matched 1 probe

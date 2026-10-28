@@ -18,7 +18,7 @@ struct {
 
 int i;
 
-BEGIN
+dtrace:::BEGIN
 {
 	str = "foobarbazbop";
 	str2 = "";
@@ -157,7 +157,7 @@ BEGIN
 
 }
 
-tick-1ms
+profile:::tick-1ms
 /i < end && command[i].nolen/
 {
 	this->str = command[i].alt ? altstr : str;
@@ -180,7 +180,7 @@ tick-1ms
 	printf("\t}\n\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /i < end && !command[i].nolen/
 {
 	this->str = command[i].alt ? altstr : str;
@@ -203,14 +203,14 @@ tick-1ms
 	printf("\t}\n\n");
 }
 
-tick-1ms
+profile:::tick-1ms
 /++i == end/
 {
 	printf("\texit($failed);\n}\n");
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	printf("ERROR\n");
 	exit(1);

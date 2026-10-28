@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -34,7 +34,7 @@ translator struct myoutput_struct < struct myinput_struct ivar >
 };
 
 struct myinput_struct f;
-BEGIN
+dtrace:::BEGIN
 {
 	f.i = 10;
 	f.c = 'c';
@@ -43,13 +43,13 @@ BEGIN
 	realmyc = xlate < struct myoutput_struct > (f).myc;
 }
 
-BEGIN
+dtrace:::BEGIN
 /(10 != f.i) || ('c' != f.c)/
 {
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(10 == f.i) && ('c' == f.c)/
 {
 	printf("realmyi: %d\n", realmyi);
@@ -57,7 +57,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

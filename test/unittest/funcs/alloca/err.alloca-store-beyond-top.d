@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,14 +15,14 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	s = (char *)alloca(15);
 	s[16] = 65;
         exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }
