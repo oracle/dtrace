@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
 #pragma D option quiet
 
 
-BEGIN
+dtrace:::BEGIN
 {
 	int_orig = 100;
 	int_pos = 100+1;
@@ -33,7 +33,7 @@ BEGIN
 
 }
 
-tick-1
+profile:::tick-1
 /int_pos_before  == int_pos && int_neg_before == int_neg &&
 	int_pos_after == int_orig && int_pos_after == int_orig/
 {
@@ -41,7 +41,7 @@ tick-1
 }
 
 
-tick-1
+profile:::tick-1
 /int_pos_before  != int_pos || int_neg_before != int_neg ||
 	int_pos_after != int_orig || int_pos_after != int_orig/
 {

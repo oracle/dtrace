@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -27,7 +27,7 @@ period=$(($niters / 100))
 
 # run DTrace
 $dtrace $dt_flags -qn '
-BEGIN
+dtrace:::BEGIN
 {
 	n = 0;
 }
@@ -38,7 +38,7 @@ branches-all-'$period'
 	n++;
 }
 
-END
+dtrace:::END
 {
 	printf("%d\n", n);
 }' -c "$utils/workload_user $niters" -o tmp.txt

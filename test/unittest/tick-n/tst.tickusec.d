@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,7 +17,7 @@
 
 #pragma D option quiet
 
-tick-2000usec
+profile:::tick-2000usec
 {
 	printf("This test is a simple tick-usec provider test\n");
 	exit(0);

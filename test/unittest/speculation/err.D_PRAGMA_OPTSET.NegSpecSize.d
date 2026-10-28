@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,7 +17,7 @@
 #pragma D option quiet
 #pragma D option specsize=-40
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->speculateFlag = 0;
 	self->commitFlag = 0;
@@ -25,7 +25,7 @@ BEGIN
 	printf("Speculative buffer ID: %d\n", self->spec);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(self->spec);
 	printf("Lots of data\n");
@@ -36,21 +36,21 @@ BEGIN
 
 }
 
-BEGIN
+dtrace:::BEGIN
 /1 <= self->speculateFlag/
 {
 	commit(self->spec);
 	self->commitFlag++;
 }
 
-BEGIN
+dtrace:::BEGIN
 /1 <= self->commitFlag/
 {
 	printf("Statement was executed\n");
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /1 > self->commitFlag/
 {
 	printf("Statement wasn't executed\n");

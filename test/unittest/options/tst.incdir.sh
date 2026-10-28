@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -16,7 +16,7 @@ cd $DIRNAME
 
 cat << EOF > D.d
 #include "D.h"
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%c%c%c%c\n", (foo) 0x67, (foo) 0x6f, (foo) 0x6f, (foo) 0x64);
 	exit(0);

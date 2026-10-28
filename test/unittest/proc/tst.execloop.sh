@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -21,4 +21,4 @@ fi
 
 dtrace=$1
 
-$dtrace $dt_flags -n 'BEGIN { exit(0); }'
+$dtrace $dt_flags -n 'dtrace:::BEGIN { exit(0); }'

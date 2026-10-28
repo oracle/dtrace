@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -41,7 +41,7 @@ cat > $tmpdir/test-unittest-dtrace-util-preprocessor-hashbang.d <<EOF
 this should not be seen
 #endif
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("This test should compile\n");
 	exit(0);

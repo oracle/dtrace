@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -26,7 +26,7 @@ dtrace:::END
 	printa("   %-28s %-28s %6s %@8d\n", @num);
 }
 
-tick-10s
+profile:::tick-10s
 {
 	exit(0);
 }

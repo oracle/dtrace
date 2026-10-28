@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -20,7 +20,7 @@ translator lwpsinfo_t < struct task_struct *T >
 	pr_lwpid = T->pid;
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	xlate < lwpsinfo_t * > (curthread);
 	exit(0);

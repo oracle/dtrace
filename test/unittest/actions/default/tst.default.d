@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,33 +16,33 @@
  */
 
 /* should not trace, but should set n=1 */
-BEGIN
+dtrace:::BEGIN
 { n = 1; }
 
 /* should trace, "hello world 1" should appear */
-BEGIN
+dtrace:::BEGIN
 { printf("hello world %d", n); }
 
 /* should not trace, but should update n+=2 */
-BEGIN
+dtrace:::BEGIN
 { n += 2; }
 
 /* should trace, and n should be 1+2=3 */
-BEGIN
+dtrace:::BEGIN
 { printf("%d", n); }
 
 /* should trace, but not report anything */
-BEGIN
+dtrace:::BEGIN
 { }
 
 /* should not trace, but should update n+=4 */
-BEGIN
+dtrace:::BEGIN
 { n += 4; }
 
 /* should trace, and n should be 1+2+4=7 */
-BEGIN
+dtrace:::BEGIN
 { trace(n); }
 
 /* should trace */
-BEGIN
+dtrace:::BEGIN
 { exit(0) }

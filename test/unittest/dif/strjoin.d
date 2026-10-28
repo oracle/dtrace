@@ -1,10 +1,10 @@
-BEGIN
+dtrace:::BEGIN
 {
 	trace(strjoin(probeprov, probename));
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -21,20 +21,20 @@
 
 inline uint64_t NANOSEC = 1000000000;
 
-tick-1sec
+profile:::tick-1sec
 /n++ > 5/
 {
 	exit(2);
 	ts = timestamp;
 }
 
-END
+dtrace:::END
 /(this->delta = timestamp - ts) > 2 * NANOSEC/
 {
 	exit(0);
 }
 
-END
+dtrace:::END
 /this->delta <= 2 * NANOSEC/
 {
 	printf("delta between exit() and END (%u nanos) too small",
@@ -42,7 +42,7 @@ END
 	exit(1);
 }
 
-END
+dtrace:::END
 /this->delta > 20 * NANOSEC/
 {
 	printf("delta between exit() and END (%u nanos) too large",

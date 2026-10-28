@@ -1,7 +1,7 @@
 expected failure
 -- @@stderr --
 dtrace: invalid probe specifier 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

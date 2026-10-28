@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,7 +12,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->var = speculation();
 	printf("Speculation ID: %d\n", self->var);
@@ -20,7 +20,7 @@ BEGIN
 	self->discard = 0;
 }
 
-BEGIN
+dtrace:::BEGIN
 /1 > self->speculate/
 {
 	speculate(self->var);
@@ -28,21 +28,21 @@ BEGIN
 	printf("Called speculate on id: %d\n", self->var);
 }
 
-BEGIN
+dtrace:::BEGIN
 /1 <= self->speculate/
 {
 	discard(self->var);
 	self->discard++;
 }
 
-BEGIN
+dtrace:::BEGIN
 /(1 == self->discard)/
 {
 	printf("Successfully tested buffer discard\n");
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(0 == self->discard)/
 {
 	printf("Failed to discard buffer\n");

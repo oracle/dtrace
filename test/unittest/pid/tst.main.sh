@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -19,7 +19,7 @@ dtrace=$1
 #
 
 $dtrace $dt_flags -c test/triggers/delaydie -s /dev/stdin <<EOF
-	BEGIN
+	dtrace:::BEGIN
 	{
 		status = 1;
 	}
@@ -29,7 +29,7 @@ $dtrace $dt_flags -c test/triggers/delaydie -s /dev/stdin <<EOF
 		status = 0;
 	}
 
-	END
+	dtrace:::END
 	{
 		exit(status);
 	}

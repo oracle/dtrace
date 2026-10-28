@@ -15,7 +15,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("The pgid is %d\n", $pgid);
 	exit(0);

@@ -15,7 +15,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	$pid++;
 	exit(0);

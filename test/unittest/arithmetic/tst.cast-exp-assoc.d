@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -36,7 +36,7 @@ unsigned long long L[int], L0[int];
 	L[0] = (unsigned long long)(x); \
 	printf(FMT, c[0], s[0], i[0], l[0], C[0], S[0], I[0], L[0])
 
-BEGIN
+dtrace:::BEGIN
 {
 	/* from scalar */
 	TEST(-2);

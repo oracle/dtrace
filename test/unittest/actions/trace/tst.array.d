@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,7 +13,7 @@
 
 short n[5];
 
-BEGIN
+dtrace:::BEGIN
 {
 	n[0] = 0x7464;
 	n[1] = 0x6172;

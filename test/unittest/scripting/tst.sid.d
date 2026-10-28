@@ -15,7 +15,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("The sid is %d\n", $sid);
 	exit(0);

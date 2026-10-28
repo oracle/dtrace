@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -19,7 +19,7 @@
 
 int *badptr;
 
-BEGIN
+dtrace:::BEGIN
 {
 	ptr = alloca(sizeof(int));
 
@@ -28,7 +28,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

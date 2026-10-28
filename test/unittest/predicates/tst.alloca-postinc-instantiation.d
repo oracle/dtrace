@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,7 @@
 
 #pragma D option quiet
 
-BEGIN / (new++ == 0) ? bar = alloca(10) : bar /
+dtrace:::BEGIN / (new++ == 0) ? bar = alloca(10) : bar /
 {
 	trace(new);
 	trace(bar);
@@ -23,24 +23,24 @@ BEGIN / (new++ == 0) ? bar = alloca(10) : bar /
         b_value = *b;
 }
 
-BEGIN / new == 0 /
+dtrace:::BEGIN / new == 0 /
 {
 	trace("new is still zero");
 	exit(1);
 }
 
-BEGIN / b_value == 0 / { exit(0); }
+dtrace:::BEGIN / b_value == 0 / { exit(0); }
 
-BEGIN / b == 0 /
+dtrace:::BEGIN / b == 0 /
 {
 	printf("b stayed zero");
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("*b is %x, not zero", b_value);
 	exit(1);
 }
 
-ERROR { exit(1); }
+dtrace:::ERROR { exit(1); }

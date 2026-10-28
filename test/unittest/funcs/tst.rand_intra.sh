@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -14,7 +14,7 @@ niter=25000
 # is, use lquantize to look at the distribution of 4-bit blocks.
 
 $dtrace $dt_flags -q -o $tmpfile -c test/triggers/bogus-ioctl -n '
-BEGIN { n = 0 }
+dtrace:::BEGIN { n = 0 }
 syscall::ioctl:entry
 /pid == $target/
 {

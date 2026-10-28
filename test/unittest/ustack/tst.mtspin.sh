@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -29,44 +29,44 @@ $dtrace $dt_flags -o $file -c test/triggers/ustack-tst-mtspin -s /dev/stdin <<EO
 	 * its steady state.
 	 */
 
-	profile-1999
+	profile:::profile-1999
 	/pid == \$target && n++ > 100/
 	{
 		@total = count();
 		@stacks[ustack()] = count();
 	}
 
-	tick-1s
+	profile:::tick-1s
 	{
 		secs++;
 	}
 
-	tick-1s
+	profile:::tick-1s
 	/secs > 5/
 	{
 		done = 1;
 	}
 
-	tick-1s
+	profile:::tick-1s
 	/secs > 10/
 	{
 		trace("test timed out");
 		exit(1);
 	}
 
-	profile-1999
+	profile:::profile-1999
 	/pid == \$target && done/
 	{
 		raise(SIGINT);
 		exit(0);
 	}
 
-	BEGIN
+	dtrace:::BEGIN
 	{
 		printf("%i\n", \$target);
 	}
 
-	END
+	dtrace:::END
 	{
 		printa("TOTAL %@u\n", @total);
 		printa("START%kEND\n", @stacks);

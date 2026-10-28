@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,14 +13,14 @@
  */
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->speculateFlag = 0;
 	self->discardFlag = 0;
 	self->spec = speculation();
 }
 
-BEGIN
+dtrace:::BEGIN
 /self->spec/
 {
 	speculate(self->spec);
@@ -28,7 +28,7 @@ BEGIN
 	self->speculateFlag++;
 }
 
-BEGIN
+dtrace:::BEGIN
 /(self->spec) && (self->speculateFlag)/
 {
 	discard(self->spec);
@@ -36,19 +36,19 @@ BEGIN
 	printf("Data recording after discard\n");
 }
 
-BEGIN
+dtrace:::BEGIN
 /self->discardFlag/
 {
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /!self->discardFlag/
 {
 	exit(1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

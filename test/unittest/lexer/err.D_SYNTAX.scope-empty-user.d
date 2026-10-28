@@ -12,7 +12,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(bar``);
 	exit(0);

@@ -38,7 +38,7 @@ struct dqstr {
 	unsigned char *name;
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	s = (struct D`dqstr *)alloca(sizeof(struct D`dqstr));
 	bcopy(&curthread->fs->root.dentry->d_name, s, sizeof(struct D`dqstr));
@@ -50,7 +50,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	printf("ERROR\n");
 	exit(1);

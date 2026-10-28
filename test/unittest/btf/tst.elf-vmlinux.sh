@@ -12,7 +12,7 @@ mkdir -p "$dir" || exit 1
 
 "$dtrace" $dt_flags -e -xdebug -xctfpath="$dir/missing.ctfa" \
 	-xbtfpath="$dir" -n '
-BEGIN
+dtrace:::BEGIN
 {
 	this->size = sizeof(struct vmlinux`task_struct);
 }' >"$dir/output" 2>&1

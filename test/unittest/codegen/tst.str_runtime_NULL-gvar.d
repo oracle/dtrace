@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,7 +12,7 @@
 #pragma D option quiet
 
 /* set some global variables to run-time NULL */
-BEGIN
+dtrace:::BEGIN
 {
 	g1 = strchr("abcdefghij", 'Z');
 	g2 = strstr("ABCDEFGHIJ", "a");
@@ -20,7 +20,7 @@ BEGIN
 }
 
 /* set some (clause-)local variables to run-time NULL */
-BEGIN
+dtrace:::BEGIN
 {
 	this->l1 = strchr("abcdefghij", 'Z');
 	this->l2 = strstr("ABCDEFGHIJ", "a");
@@ -28,7 +28,7 @@ BEGIN
 }
 
 /* set some thread-local variables to run-time NULL */
-BEGIN
+dtrace:::BEGIN
 {
 	self->t1 = strchr("abcdefghij", 'Z');
 	self->t2 = strstr("ABCDEFGHIJ", "a");
@@ -36,7 +36,7 @@ BEGIN
 }
 
 /* set some associative-array variables to run-time NULL */
-BEGIN
+dtrace:::BEGIN
 {
 	a1[1234] = strchr("abcdefghij", 'Z');
 	a2[1234] = strstr("ABCDEFGHIJ", "a");
@@ -44,35 +44,35 @@ BEGIN
 }
 
 /* compare some variables */
-BEGIN
+dtrace:::BEGIN
 /g1 != g2 || this->l1 != this->l2 || self->t1 != self->t2 || a1[1234] != a2[1234]/
 {
 	printf("FAIL A\n");
 }
 
 /* compare more variables */
-BEGIN
+dtrace:::BEGIN
 /g1 != g3 || this->l1 != this->l3 || self->t1 != self->t3 || a1[1234] != a3[1234]/
 {
 	printf("FAIL B\n");
 }
 
 /* compare some variables to compile-time NULL */
-BEGIN
+dtrace:::BEGIN
 /g1 != NULL || this->l1 != NULL || self->t1 != NULL || a1[1234] != NULL/
 {
 	printf("FAIL C\n");
 }
 
 /* exit */
-BEGIN
+dtrace:::BEGIN
 {
 	printf("done\n");
 	exit(0);
 }
 
 /* handle any unexpected errors */
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -18,7 +18,7 @@ script()
 	uint64_t total;
 	int thresh;
 
-	BEGIN
+	dtrace:::BEGIN
 	{
 		start = timestamp;
 		thresh = 10;
@@ -36,13 +36,13 @@ script()
 		total += vtimestamp - self->on;
 	}
 
-	tick-1sec
+	profile:::tick-1sec
 	/i++ == 10/
 	{
 		exit(0);
 	}
 
-	END
+	dtrace:::END
 	/((total * 100) / (timestamp - start)) > thresh/
 	{
 		printf("'%s' buffering policy took %d%% of CPU; ",

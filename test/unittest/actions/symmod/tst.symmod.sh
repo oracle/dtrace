@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -21,7 +21,7 @@ NAM=$MOD'`'$NAM
 
 # run DTrace to test mod() and sym()
 # also test func(), but it is simply an alias for sym()
-read MYMOD MYNAM MYFUN <<< `$dtrace $dt_flags -qn 'BEGIN {mod(0x'$ADD'); sym(0x'$ADD'); func(0x'$ADD'); exit(0) }'`
+read MYMOD MYNAM MYFUN <<< `$dtrace $dt_flags -qn 'dtrace:::BEGIN {mod(0x'$ADD'); sym(0x'$ADD'); func(0x'$ADD'); exit(0) }'`
 if [ $? -ne 0 ]; then
 	exit 1
 fi

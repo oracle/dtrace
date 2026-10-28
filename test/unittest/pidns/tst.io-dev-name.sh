@@ -57,13 +57,13 @@ io:::start
 	bad++;
 }
 
-END
+dtrace:::END
 /seen == 0/
 {
 	printf("did not see io:::start for %s\n", "'"$statname"'");
 }
 
-END
+dtrace:::END
 {
 	exit(seen == 0 || bad != 0);
 }

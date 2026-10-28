@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,7 +11,7 @@
 
 #pragma D option quiet
 
-BEGIN {
+dtrace:::BEGIN {
 	trace(z = strjoin((x = strjoin("abc", "def")),
 			  (y = strjoin("ABC", "DEF"))));
 	trace(" ");
@@ -24,6 +24,6 @@ BEGIN {
 	exit(0);
 }
 
-ERROR {
+dtrace:::ERROR {
 	exit(1);
 }

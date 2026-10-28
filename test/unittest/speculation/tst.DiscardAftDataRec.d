@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,13 +15,13 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->spec = speculation();
 	printf("Speculative buffer ID: %d\n", self->spec);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Can have data recording before discarding\n");
 	discard(self->spec);

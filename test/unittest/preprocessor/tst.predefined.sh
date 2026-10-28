@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -58,7 +58,7 @@ vers=`printf "%x" $(($MM << 24 | $mmm << 12 | $uuu))`
 
 # Start setting up the D script.
 
-echo 'BEGIN {' > D.d
+echo 'dtrace:::BEGIN {' > D.d
 
 # Check for the preprocessor definitions of COMMANDLINE-OPTIONS.
 

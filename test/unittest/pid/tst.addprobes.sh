@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -23,14 +23,14 @@ sleep 60 &
 pid=$!
 disown %+
 
-$dtrace $dt_flags -n pid$pid:libc::entry -n 'tick-1s{exit(0);}'
+$dtrace $dt_flags -n pid$pid:libc::entry -n 'profile:::tick-1s{exit(0);}'
 status=$?
 
 if [ $status -gt 0 ]; then
 	exit $status;
 fi
 
-$dtrace $dt_flags -n pid$pid:libc::return -n 'tick-1s{exit(0);}'
+$dtrace $dt_flags -n pid$pid:libc::return -n 'profile:::tick-1s{exit(0);}'
 status=$?
 
 if [ $status -gt 0 ]; then

@@ -14,7 +14,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("The arg0 is %s\n", $0);
 	exit(0);

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -20,10 +20,10 @@ script()
 {
 	rsyslogd_pid="$(cat /var/run/syslogd.pid)"
 	DTRACE_DEBUG=t $dtrace $dt_flags -qws /dev/stdin <<EOF
-		BEGIN { system("echo foo | logger") }
+		dtrace:::BEGIN { system("echo foo | logger") }
 		syscall::write:entry / pid == $rsyslogd_pid / { ustack(500); }
-                tick-1s { i++; }
-                tick-1s / i > 4 / { exit(0); }
+                profile:::tick-1s { i++; }
+                profile:::tick-1s / i > 4 / { exit(0); }
 EOF
 }
 

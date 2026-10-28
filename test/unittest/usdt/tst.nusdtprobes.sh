@@ -100,7 +100,7 @@ for nusdt in "" "-xnusdtprobes=40" "-xnusdtprobes=39"; do
 
 	rm -f dtrace.out
 	$dtrace $dt_flags $nusdt -Zq -o dtrace.out -n '
-	BEGIN
+	dtrace:::BEGIN
 	{
 		printf("BEGIN\n");
 	}

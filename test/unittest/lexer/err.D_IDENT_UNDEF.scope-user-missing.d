@@ -12,7 +12,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(no_such_module``main);
 	exit(0);

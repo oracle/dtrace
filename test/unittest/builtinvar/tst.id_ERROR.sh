@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -15,9 +15,9 @@ cd $DIRNAME
 # Have a D script report the probe ID within an ERROR probe.
 
 $dtrace $dt_flags -qn '
-BEGIN { *((int*)0) }
-BEGIN { exit(1) }
-ERROR { printf("ERROR probe id is %d\n", id); exit(0); }
+dtrace:::BEGIN { *((int*)0) }
+dtrace:::BEGIN { exit(1) }
+dtrace:::ERROR { printf("ERROR probe id is %d\n", id); exit(0); }
 ' -o D.out 2> D.err
 if [ $? -ne 0 ]; then
     echo DTrace failed

@@ -1,6 +1,6 @@
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	arr = (int *)alloca(5 * sizeof(int));
 	idx = 4;

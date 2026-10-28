@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -85,7 +85,7 @@ script1()
 		@a[probefunc] = count();
 	}
 
-	tick-1sec
+	profile:::tick-1sec
 	/i++ == 5/
 	{
 		exit(0);
@@ -105,20 +105,20 @@ script2()
 		ttl++;
 	}
 
-	tick-1sec
+	profile:::tick-1sec
 	/i++ == 5/
 	{
 		exit(2);
 	}
 
-	END
+	dtrace:::END
 	/ttl/
 	{
 		printf("success; ttl is %d", ttl);
 		exit(0);
 	}
 
-	END
+	dtrace:::END
 	/ttl == 0/
 	{
 		printf("error -- total should be non-zero");

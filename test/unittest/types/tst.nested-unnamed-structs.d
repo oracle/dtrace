@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,17 +15,17 @@
 
 #pragma D option quiet
 
-BEGIN {
+dtrace:::BEGIN {
 	printf("offset is %i\n", offsetof(struct rds`rds_message, atomic));
 }
 
-BEGIN
+dtrace:::BEGIN
 / offsetof(struct rds`rds_message, atomic) == 0 /
 {
 	exit(1);
 }
 
-BEGIN
+dtrace:::BEGIN
 / offsetof(struct rds`rds_message, atomic) != 0 /
 {
 	exit(0);

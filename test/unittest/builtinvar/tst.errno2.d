@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,7 +17,7 @@
 #pragma D option destructive
 #pragma D option zdefs
 
-BEGIN
+dtrace:::BEGIN
 {
 	parent = pid;
 	system("cat /non/existant/file");
@@ -58,7 +58,7 @@ proc:::exit
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -19,7 +19,7 @@ struct in6_addr *ip6i;
 struct in6_addr *ip6j;
 struct in6_addr *ip6k;
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->buf6a = alloca(sizeof(struct in6_addr));
 	this->buf6b = alloca(sizeof(struct in6_addr));

@@ -39,7 +39,7 @@ lastdigit=$((${pids[0]} % 10))
 # Start dtrace.
 
 $dtrace $dt_flags -wq -o dtrace.out -n '
-BEGIN
+dtrace:::BEGIN
 {
 	printf("BEGIN\n");
 }

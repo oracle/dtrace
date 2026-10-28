@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,19 +16,19 @@
 #pragma D option quiet
 
 /* Check build-in variables from the dtrace-provider probes. */
-BEGIN,ERROR,END
+dtrace:::BEGIN,dtrace:::ERROR,dtrace:::END
 {
 	printf("%s:%s:%s:%s\n", probeprov, probemod, probefunc, probename);
 }
 
 /* Cause the ERROR probe to fire. */
-BEGIN
+dtrace:::BEGIN
 {
 	*((int*)0);
 }
 
 /* Cause the END probe to fire. */
-BEGIN,ERROR
+dtrace:::BEGIN,dtrace:::ERROR
 {
 	exit(0);
 }

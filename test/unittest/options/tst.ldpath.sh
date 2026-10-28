@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -13,5 +13,5 @@ mkdir -p $DIRNAME
 cd $DIRNAME
 
 # ldpath=ld does nothing remarkable, but this test complements err.ldpath.d
-$dtrace $dt_flags -G -xldpath=ld -n 'BEGIN {exit(0)}'
+$dtrace $dt_flags -G -xldpath=ld -n 'dtrace:::BEGIN {exit(0)}'
 exit $?

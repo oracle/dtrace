@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("\n% 3d % 3d %s", 2,   0, substr("abcdefghijklmnop", 2, 0));
 	printf("\n% 3d % 3d %s", 2,   1, substr("abcdefghijklmnop", 2, 1));

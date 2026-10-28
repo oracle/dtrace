@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,14 +16,14 @@ struct foo {
 this struct foo bar;
 long bignum;
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->bar.x = 1;
 	this->bar.y = ',';
 	this->bar.z = 1234;
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Die %s%c %s.\n", this->bar.x == 1 ? "SystemTap" : "DTrace",
 	    this->bar.y, this->bar.z == 1234 ? "Die" : "The");

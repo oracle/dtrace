@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,14 +11,14 @@
  * SECTION: Actions and Subroutines/copyinto()
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	ptr = (char *)alloca(256);
 	copyinto(0, 8, ptr);
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

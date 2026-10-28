@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,7 +17,7 @@
 
 #pragma D option scratchsize=1024
 
-BEGIN
+dtrace:::BEGIN
 {
 	ptr = alloca(1025);
 	exit(1);

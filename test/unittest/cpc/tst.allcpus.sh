@@ -1,7 +1,7 @@
 #!/bin/bash
 # 
 # Oracle Linux DTrace.
-# Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -25,7 +25,7 @@ cpc:::cpu_clock-all-1000000000
 	printf("%d\n", cpu);
 }
 
-tick-2s
+profile:::tick-2s
 {
 	exit(0);
 }' | gawk 'NF != 0 {print}' | sort > dtrace.out

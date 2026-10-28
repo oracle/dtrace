@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -89,10 +89,10 @@ while :; do
     esac
 
     if [[ $state != "POUND" ]]; then
-	result="$($dtrace $dt_flags -qc test/triggers/delaydie -n 'tick-1s { printf("timeout\n"); exit(0); }' -n 'syscall::exit_group:entry /pid == $target/ { printf("exit\n"); exit(0); }')"
+	result="$($dtrace $dt_flags -qc test/triggers/delaydie -n 'profile:::tick-1s { printf("timeout\n"); exit(0); }' -n 'syscall::exit_group:entry /pid == $target/ { printf("exit\n"); exit(0); }')"
     else
 	set -e
-	$dtrace $dt_flags -qc test/triggers/delaydie -n 'tick-1s { printf("timeout\n"); exit(0); }' -n 'syscall::exit_group:entry /pid == $target/ { printf("exit\n"); exit(0); }'
+	$dtrace $dt_flags -qc test/triggers/delaydie -n 'profile:::tick-1s { printf("timeout\n"); exit(0); }' -n 'syscall::exit_group:entry /pid == $target/ { printf("exit\n"); exit(0); }'
 	set +e
     fi
 

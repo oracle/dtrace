@@ -20,7 +20,7 @@ cp test/triggers/testprobe "$dir/scope.user" || exit 1
 cd "$dir" || exit 1
 
 PATH=.: "$dtrace" $dt_flags -e -xlinkmode=static -c scope.user -n '
-BEGIN
+dtrace:::BEGIN
 {
 	symbol = &scope.user``main;
 	type = (struct scope.user``dtrace_scope_test_type *)NULL;

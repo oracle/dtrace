@@ -2,7 +2,7 @@
 
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -22,7 +22,7 @@ fi
 
 dtrace=$1
 
-$dtrace $dt_flags -n 'BEGIN { $1; }' 0x12345678123456781
+$dtrace $dt_flags -n 'dtrace:::BEGIN { $1; }' 0x12345678123456781
 status=$?
 
 if [ "$status" -ne  0 ]; then

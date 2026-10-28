@@ -2,7 +2,7 @@
 
 #include <endian.h>
 
-BEGIN
+dtrace:::BEGIN
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	exit(htons(0x1234) == 0x3412 ? 0 : 1);

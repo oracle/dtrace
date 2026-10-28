@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,7 +12,7 @@
  * SECTION: Types, Operators, and Expressions/Data Types and Sizes
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("sizeof(int8_t) = %u\n", sizeof(int8_t));
 	printf("sizeof(int16_t) = %u\n", sizeof(int16_t));

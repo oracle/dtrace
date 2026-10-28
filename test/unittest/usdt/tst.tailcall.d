@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
  *	code into a tail-call scenario, this will work as a regular USDT probe
  *	test as last instruction of a function.
  */
-BEGIN
+dtrace:::BEGIN
 {
 	/* Timeout after 5 seconds */
 	timeout = timestamp + 5000000000;

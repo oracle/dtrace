@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
  *	User Process Tracing/copyin() and copyinstr()
  */
 
-BEGIN
+dtrace:::BEGIN
 /curpsinfo->pr_dmodel == PR_MODEL_ILP32/
 {
 	argv = *(uint32_t *)copyin(curpsinfo->pr_argv, sizeof(uint32_t));
@@ -27,7 +27,7 @@ BEGIN
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /curpsinfo->pr_dmodel == PR_MODEL_LP64/
 {
 	argv = *(uint64_t *)copyin(curpsinfo->pr_argv, sizeof(uint64_t));
@@ -38,7 +38,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -14,7 +14,7 @@ ncpus=${#cpulist[@]}
 cpu0=${cpulist[$((RANDOM % $ncpus))]}
 
 # Observe where DTrace runs.
-cpu=`$dtrace $dt_flags -xcpu=$cpu0 -qn 'BEGIN { exit(0) } END { trace(cpu); }'`
+cpu=`$dtrace $dt_flags -xcpu=$cpu0 -qn 'dtrace:::BEGIN { exit(0) } dtrace:::END { trace(cpu); }'`
 
 # Check result.
 echo expected cpu $cpu0 got cpu $cpu

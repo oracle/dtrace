@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -23,7 +23,7 @@ typedef struct record {
 	int y;
 } record_t;
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("offsetof(record_t, c) = %d\n", offsetof(record_t, c));
 	printf("offsetof(record_t, x) = %d\n", offsetof(record_t, x));
@@ -31,7 +31,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(8 != offsetof(record_t, y)) || (4 != offsetof(record_t, x)) ||
     (0 != offsetof(record_t, c))/
 {

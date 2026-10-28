@@ -12,7 +12,7 @@ mkdir -p "$dir" || exit 1
 head -c 24 /sys/kernel/btf/vmlinux >"$dir/vmlinux" || exit 1
 
 "$dtrace" $dt_flags -e -xdebug -xbtfpath="$dir" -n '
-BEGIN
+dtrace:::BEGIN
 {
 	this->size = sizeof(struct vmlinux`task_struct);
 }' >"$dir/output" 2>&1

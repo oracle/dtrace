@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -35,7 +35,7 @@ rm -f $file
 $dtrace $dt_flags -o $file -c "sleep 10" -s /dev/stdin <<EOF
 	#pragma D option quiet
 
-	BEGIN
+	dtrace:::BEGIN
 	{
 		x = 9;
 	}
@@ -44,7 +44,7 @@ $dtrace $dt_flags -o $file -c "sleep 10" -s /dev/stdin <<EOF
 		@ =  lquantize(x, 9, 12, 3);
 		x = 15 - x;
 	}
-	END
+	dtrace:::END
 	{
 		normalize(@, 3);
 	}

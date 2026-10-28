@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,7 +11,7 @@
  * SECTION: Aggregations/Aggregations
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	steps = 10;
 	@ = llquantize(1, 10, 0, 6, steps);

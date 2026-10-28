@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,22 +17,22 @@
 
 #pragma D option quiet
 
-ERROR
+dtrace:::ERROR
 {
 	printf("Error fired\n");
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace(((struct task_struct *)NULL)->pid);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Clause executed\n");
 }
 
-tick-1s
+profile:::tick-1s
 {
 	exit(0);
 }

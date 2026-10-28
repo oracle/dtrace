@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -20,7 +20,7 @@ syscall::mmap*:entry
 	exit(0);
 }
 
-tick-1s
+profile:::tick-1s
 /i++ == 3/
 {
 	exit(1);

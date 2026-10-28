@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -15,7 +15,7 @@
  * A script from Jon Haslam that induced an off-by-one error in the
  * format lookup code.
  */
-BEGIN
+dtrace:::BEGIN
 {
 	start = timestamp;
 	allocd = 0;
@@ -29,13 +29,13 @@ syscall:::entry
 	@sys[tid] = sum(tid);
 }
 
-END
+dtrace:::END
 {
 	printf("%s, %s, %s, %d numtids", "hhh", "jjj", "ggg", numtids);
 	printa(@sys);
 }
 
-tick-1sec
+profile:::tick-1sec
 /n++ == 5/
 {
 	exit(0);

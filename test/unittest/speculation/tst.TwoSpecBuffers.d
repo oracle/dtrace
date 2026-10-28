@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -18,14 +18,14 @@
 #pragma D option quiet
 #pragma D option nspec=2
 
-BEGIN
+dtrace:::BEGIN
 {
 	var1 = 0;
 	var2 = 0;
 	var3 = 0;
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	var1 = speculation();
 	printf("Speculation ID: %d\n", var1);
@@ -35,21 +35,21 @@ BEGIN
 	printf("Speculation ID: %d\n", var3);
 }
 
-BEGIN
+dtrace:::BEGIN
 /var1 && var2 && (!var3)/
 {
 	printf("Successfully got two speculative buffers");
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /(!var1) || (!var2) || var3/
 {
 	printf("Test failed");
 	exit(1);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

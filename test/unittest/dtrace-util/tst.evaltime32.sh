@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -36,7 +36,7 @@ for trigger in visible-constructor-32; do
         $dtrace $dt_flags -q -c test/triggers/$trigger -x evaltime=$stage -s /dev/stdin <<EOF
 syscall::brk:entry /pid == \$target/ { loader_seen = 1; }
 syscall::write*:entry /pid == \$target/ { writes++; }
-END { printf("evaltime is $stage, trigger is %s, %i write()s; dynamic loader syscalls %s.\n",
+dtrace:::END { printf("evaltime is $stage, trigger is %s, %i write()s; dynamic loader syscalls %s.\n",
       "$trigger", writes, loader_seen ? "seen" : "not seen"); }
 EOF
     done
@@ -46,7 +46,7 @@ for trigger in visible-constructor-32; do
     $dtrace $dt_flags -q -c test/triggers/$trigger -s /dev/stdin <<EOF
 syscall::brk:entry /pid == \$target/ { loader_seen = 1; }
 syscall::write*:entry /pid == \$target/ { writes++; }
-END { printf("evaltime is default, trigger is %s, %i write()s; dynamic loader syscalls %s.\n",
+dtrace:::END { printf("evaltime is default, trigger is %s, %i write()s; dynamic loader syscalls %s.\n",
       "$trigger", writes, loader_seen ? "seen" : "not seen"); }
 EOF
 done

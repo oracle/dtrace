@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
 
 #pragma D option quiet
 
-ERROR
+dtrace:::ERROR
 {
 	printf("The arguments are %u %u PC %u %u\n",
 		arg1, arg2, arg4, arg5);
@@ -24,7 +24,7 @@ ERROR
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (int *)64;
 	y = *x;

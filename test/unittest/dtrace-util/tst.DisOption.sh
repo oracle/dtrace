@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -42,13 +42,13 @@ cd $DIRNAME
 
 cat << EOF > D1.d
 int x;
-BEGIN {
+dtrace:::BEGIN {
     x = 1234;
     y = x;
 }
 EOF
 cat << EOF > D2.d
-BEGIN {
+dtrace:::BEGIN {
     trace(y);
     exit(0);
 }

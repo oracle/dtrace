@@ -17,7 +17,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 /i = 123$pid/
 {
 	exit(0);

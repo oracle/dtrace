@@ -15,7 +15,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	processid = $pid;
 	exit(0);

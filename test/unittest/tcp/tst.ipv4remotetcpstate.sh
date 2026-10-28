@@ -2,7 +2,7 @@
 
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -58,7 +58,7 @@ fi
 
 
 $dtrace $dt_flags -c "$testdir/../ip/client.ip.pl tcp $dest $tcpport" -qs /dev/stdin <<EODTRACE
-BEGIN
+dtrace:::BEGIN
 {
 	ipsend = tcpsend = ipreceive = tcpreceive = 0;
 	connreq = connest = 0;
@@ -111,7 +111,7 @@ tcp:::connect-established
 	connest++;
 }
 
-END
+dtrace:::END
 {
 	printf("Minimum TCP events seen\n\n");
 	printf("ip:::send - %s\n", ipsend >= 4 ? "yes" : "no");

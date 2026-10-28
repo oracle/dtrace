@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,19 +14,19 @@
  * SECTION: Actions and Subroutines/tracemem()
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	i = 1;
 }
 
-tick-1
+profile:::tick-1
 /i != 5/
 {
 	tracemem((void *)&`init_task, 20);
 	i++;
 }
 
-tick-1
+profile:::tick-1
 /i == 5/
 {
 	exit(0);

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -33,7 +33,7 @@ translator union output_union < struct input_struct *ivar >
 
 };
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Test translator definition with union output");
 	exit(0);

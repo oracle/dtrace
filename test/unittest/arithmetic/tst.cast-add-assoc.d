@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -31,7 +31,7 @@ unsigned long long L[int];
   x[0] = +2; y[0] = -3; printf(FMT, x[0] + y[0]); printf(FMT, y[0] + x[0]); \
   x[0] = +2; y[0] = +3; printf(FMT, x[0] + y[0]); printf(FMT, y[0] + x[0]); printf("\n");
 
-BEGIN
+dtrace:::BEGIN
 {
 	/* cast to signed char */
 	USE_FMT(" %hhd");

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,7 +13,7 @@
  * Ensure that arguments to USDT probes can be retrieved both from registers
  * and the stack.
  */
-BEGIN
+dtrace:::BEGIN
 {
 	/* Timeout after 5 seconds */
 	timeout = timestamp + 5000000000;

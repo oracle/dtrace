@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -10,13 +10,13 @@
 script()
 {
 	$dtrace $dt_flags -qs /dev/stdin <<EOF
-	profile-1234hz
+	profile:::profile-1234hz
 	/arg1 != 0/
 	{
 		@[usym(arg1)] = count();
 	}
 
-	tick-2s
+	profile:::tick-2s
 	{
 		exit(0);
 	}

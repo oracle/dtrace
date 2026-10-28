@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -21,7 +21,7 @@
 
 int *x;
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("x: %x\n", (int)x);
 	printf("x + 1: %x\n", (int)(x+1));
@@ -29,7 +29,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(0 != (int)x) || (4 != (int)(x+1)) || (8 != (int)(x+2))/
 {
 	printf("Error");

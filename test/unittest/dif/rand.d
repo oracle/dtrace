@@ -1,4 +1,4 @@
-BEGIN
+dtrace:::BEGIN
 {
 	trace(rand());
 	exit(0);

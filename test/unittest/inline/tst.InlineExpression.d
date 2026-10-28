@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -44,7 +44,7 @@ inline long double new_long_double = 3.567890123;
 inline unsigned long * pointer = (unsigned long *)&`max_pfn;
 inline int result = 3 > 2 ? 3 : 2;
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("new_char: %c\nnew_short: %d\nnew_int: %d\nnew_long: %d\n",
 	    new_char, new_short, new_int, new_long);

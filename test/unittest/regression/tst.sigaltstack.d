@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,7 +11,7 @@
 /*
  * Ensure that tracing sigaltstack syscalls works.
  */
-BEGIN
+dtrace:::BEGIN
 {
 	/* Timeout after 3 seconds */
 	timeout = timestamp + 3000000000;

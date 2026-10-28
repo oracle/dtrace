@@ -23,7 +23,7 @@
  * - the script executes (dtrace could attach to the probes)
  */
 
-BEGIN,
+dtrace:::BEGIN,
 *fbt:vmlinux:do_sys_open*:entry
 {
 	printf("success\n");

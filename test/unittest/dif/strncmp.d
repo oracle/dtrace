@@ -1,4 +1,4 @@
-BEGIN
+dtrace:::BEGIN
 {
 	rc = probename == "BEGIN" ? 0 : 1;
 	printf("%d", rc);
@@ -6,7 +6,7 @@ BEGIN
 	exit(rc);
 }
 
-END
+dtrace:::END
 {
 	printf("%d", probename == "BEGIN" ? 0 : 1);
 }

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -18,14 +18,14 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("R_PC = 0x%x\n", uregs[R_PC]);
 	printf("R_SP = 0x%x\n", uregs[R_SP]);
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	printf("uregs access failed.\n");
 	exit(1);

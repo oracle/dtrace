@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -16,7 +16,7 @@
 
 #pragma D option dynvarsize=15
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->a = 1;
 	self->b = 2;
@@ -24,7 +24,7 @@ BEGIN
 	self->d = 4;
 }
 
-tick-1s
+profile:::tick-1s
 {
 	exit(0);
 }

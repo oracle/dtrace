@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -9,19 +9,19 @@
 #pragma D option specsize=32
 #pragma D option strsize=512
 
-BEGIN
+dtrace:::BEGIN
 {
 	spec = speculation();
 	speculate(spec);
 	trace("The, SystemTap, The.");
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	commit(spec);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

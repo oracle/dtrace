@@ -2,7 +2,7 @@
 
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -42,7 +42,7 @@ local=127.0.0.1
 tcpport=22
 
 $dtrace $dt_flags -c "$testdir/../ip/client.ip.pl tcp $local $tcpport" -qs /dev/stdin <<EODTRACE
-BEGIN
+dtrace:::BEGIN
 {
 	send = receive = 0;
 }
@@ -59,7 +59,7 @@ tcp:::receive
 	receive++;
 }
 
-END
+dtrace:::END
 {
 	printf("Minimum TCP events seen\n\n");
 	printf("tcp:::send - %s\n", send >= 5 ? "yes" : "no");

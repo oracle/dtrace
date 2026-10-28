@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -23,7 +23,7 @@ watch_output_for() {
     fi
 }
 
-$dtrace $dt_flags -n BEGIN,END -o $out &
+$dtrace $dt_flags -n dtrace:::BEGIN,dtrace:::END -o $out &
 watch_output_for :BEGIN
 kill %1
 watch_output_for :END

@@ -17,7 +17,7 @@ string str;
 char a[2];
 uintptr_t addr;
 size_t maxlen;
-BEGIN
+dtrace:::BEGIN
 {
 	self->i = 0;
 	addr = (uintptr_t)&a[0];
@@ -25,7 +25,7 @@ BEGIN
 	var = speculation();
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(var);
 	printf("Speculation ID: %d", var);
@@ -33,13 +33,13 @@ BEGIN
 	copyoutstr(str, addr, maxlen);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("This test should not have compiled\n");
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(0);
 }

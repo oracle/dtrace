@@ -21,7 +21,7 @@ cur_pidns_ino=`stat -Lc %i /proc/self/ns/pid 2>/dev/null`
 
 check_current_namespace()
 {
-	out=`"$dtrace" $dt_flags -xdisasm=8 -S -n 'BEGIN { exit(0); }' 2>&1`
+	out=`"$dtrace" $dt_flags -xdisasm=8 -S -n 'dtrace:::BEGIN { exit(0); }' 2>&1`
 	status=$?
 	if [ $status -ne 0 ]; then
 		echo "$out"
@@ -41,7 +41,7 @@ echo "$out"
 
 check_nested_namespace()
 {
-	out=`run_in_pidns "$dtrace" $dt_flags -xdisasm=8 -S -n 'BEGIN { exit(0); }' 2>&1`
+	out=`run_in_pidns "$dtrace" $dt_flags -xdisasm=8 -S -n 'dtrace:::BEGIN { exit(0); }' 2>&1`
 	status=$?
 	if [ $status -ne 0 ]; then
 		echo "$out"

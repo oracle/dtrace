@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -13,19 +13,19 @@
 dtrace=$1
 
 $dtrace $dt_flags -wqn '
-tick-600ms
+profile:::tick-600ms
 {
 	freopen("/dev/null");
 }
-tick-700ms
+profile:::tick-700ms
 {
 	printf("hello world\n");
 }
-tick-800ms
+profile:::tick-800ms
 {
 	freopen("");
 }
-tick-900ms
+profile:::tick-900ms
 {
 	printf("the quick brown fox jumped over the lazy dog\n");
 	exit(0);

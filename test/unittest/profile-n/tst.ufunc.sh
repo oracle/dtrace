@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -11,17 +11,17 @@ tmpfile=$tmpdir/tst.profile_ufunc.$$
 script()
 {
 	$dtrace $dt_flags -qs /dev/stdin <<EOF
-	BEGIN
+	dtrace:::BEGIN
 	{
 		printf("dtrace is %d\n", \$pid);
 	}
-	profile-1234hz
+	profile:::profile-1234hz
 	/arg1 != 0/
 	{
 		@[ufunc(arg1), pid] = count();
 	}
 
-	tick-2s
+	profile:::tick-2s
 	{
 		exit(0);
 	}

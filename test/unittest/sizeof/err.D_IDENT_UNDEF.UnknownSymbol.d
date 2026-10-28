@@ -14,7 +14,7 @@
  */
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("sizeof(`unknown_symbol): %d\n", sizeof(`unknown_symbol));
 	exit(0);

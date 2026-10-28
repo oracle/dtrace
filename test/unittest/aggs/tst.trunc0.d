@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,7 +11,7 @@
 #pragma D option aggrate=1ms
 #pragma D option switchrate=50ms
 
-BEGIN
+dtrace:::BEGIN
 {
 	n = 0;
 	i = 0; @[i] = sum(10 - i);
@@ -34,7 +34,7 @@ syscall::write:entry
 	exit(0);
 }
 
-END
+dtrace:::END
 {
 	printa(@);
 }

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -8,7 +8,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	tun_page = (struct tun_page *)alloca(sizeof (struct tun_page));
 	tun_page->page = (struct page *)0xfeedfacefeedface;

@@ -22,7 +22,7 @@ fbt::hrtimer_nanosleep:entry
         exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
         exit(1);
 }' | grep -q 0xffff

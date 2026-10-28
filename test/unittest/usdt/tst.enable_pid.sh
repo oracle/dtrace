@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -163,7 +163,7 @@ disown %+
 for pid in 1 $pid1 $pid2 '*'; do
 	sleep 1
 	$dtrace $dt_flags -Zn 'test_prov'$pid':::go { trace("hi"); }
-                               tick-1s { exit(0) }'
+                               profile:::tick-1s { exit(0) }'
 	if [ $? -ne 0 ]; then
 		echo ERROR: dtrace
 		kill -TERM $pid1

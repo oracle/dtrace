@@ -22,7 +22,7 @@ cp $trigger main
 
 # Start dtrace.
 $dtrace $dt_flags -Zq -o dtrace.out -n '
-BEGIN
+dtrace:::BEGIN
 {
 	printf("BEGIN\n");
 }

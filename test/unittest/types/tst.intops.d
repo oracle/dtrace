@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -17,14 +17,14 @@
 #pragma D option quiet
 
 
-BEGIN
+dtrace:::BEGIN
 {
 	int_1 = 0x100;
 	int_2 = 0x101;
 	int_3 = 0x99;
 }
 
-tick-1
+profile:::tick-1
 /int_1 >= int_2 || int_2 <= int_1 || int_1 == int_2/
 {
 	printf("Shouldn't end up here (1)\n");
@@ -33,7 +33,7 @@ tick-1
 	exit(1);
 }
 
-tick-1
+profile:::tick-1
 /int_3 > int_1 || int_1 < int_3 || int_3 == int_1/
 {
 	printf("Shouldn't end up here (2)\n");
@@ -42,7 +42,7 @@ tick-1
 	exit(1);
 }
 
-tick-1
+profile:::tick-1
 /int_2 > int_3 && int_1 < int_2 ^^ int_3 == int_2 && !(int_1 != int_2)/
 {
 	exit(0);

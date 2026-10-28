@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -15,7 +15,7 @@ niter=25000
 # 2 bits from two consecutive words at arbitrary locations.
 
 $dtrace $dt_flags -q -o $tmpfile -c test/triggers/bogus-ioctl -n '
-BEGIN
+dtrace:::BEGIN
 {
 	n = 0;
 	x = rand();

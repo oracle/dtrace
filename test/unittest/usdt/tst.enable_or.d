@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,7 @@
  *	Make sure that a is-enabled probe can be used as part of a ||
  *	construct.
  */
-BEGIN
+dtrace:::BEGIN
 {
 	/* Timeout after 5 seconds */
 	timeout = timestamp + 5000000000;

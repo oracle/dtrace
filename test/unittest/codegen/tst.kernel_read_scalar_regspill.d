@@ -1,6 +1,6 @@
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	a = 1;
 	b = 2;
@@ -30,7 +30,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

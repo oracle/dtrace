@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -205,12 +205,12 @@ gawk 'NF == 23 { print $16, $21 }' $infile | sort | uniq > majnam.txt
 
 # Compose a D script to write a name for each major number.
 gawk '{
-        printf("BEGIN { x = %s }\n", $1);
-        printf("BEGIN { printf(\"%%d %%s\\n\", %s, stringof(((struct blk_major_name **)&`major_names)[%s % 255]->name)); }\n",
+        printf("dtrace:::BEGIN { x = %s }\n", $1);
+        printf("dtrace:::BEGIN { printf(\"%%d %%s\\n\", %s, stringof(((struct blk_major_name **)&`major_names)[%s % 255]->name)); }\n",
                $1, $1);
       }' majnam.txt >> D.d
-echo "BEGIN { exit(0); }" >> D.d
-echo "ERROR { printf(\"%d nfs\\n\", x) }" >> D.d
+echo "dtrace:::BEGIN { exit(0); }" >> D.d
+echo "dtrace:::ERROR { printf(\"%d nfs\\n\", x) }" >> D.d
 
 $dtrace $dt_flags -qs D.d | sort | gawk 'NF != 0' > majnam.chk
 

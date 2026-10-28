@@ -96,7 +96,7 @@ cleanup()
 trap cleanup EXIT
 
 $dtrace $dt_flags -qn '
-BEGIN
+dtrace:::BEGIN
 {
 	entries = 0;
 	bad = 0;

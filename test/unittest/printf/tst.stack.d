@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,7 +13,7 @@
 
 #pragma D option destructive
 
-BEGIN
+dtrace:::BEGIN
 {
 	system("echo write something > /dev/null");
 }
@@ -27,7 +27,7 @@ fbt::ksys_write:entry
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -11,7 +11,7 @@
  *	      Test some other stack variables for corruption.
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->x = this->y = this-> z = 123456789;
 	a = b = c = d = e = f = g = h = i = j = k = 87654321;

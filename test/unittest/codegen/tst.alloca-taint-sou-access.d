@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -10,7 +10,7 @@
  * member dereferences.
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	ptr = (struct in6_addr *)alloca(sizeof(struct in6_addr));
 	ptr->in6_u.u6_addr8[0] = 0x42;
@@ -18,7 +18,7 @@ BEGIN
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

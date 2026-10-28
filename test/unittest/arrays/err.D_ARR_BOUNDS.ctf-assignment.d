@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -12,7 +12,7 @@
  * SECTION: Pointers and Arrays/Array Declarations and Storage
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	/* This must be higher than TASK_COMM_LEN. */
 	curlwpsinfo->pr_name[256] = '0';

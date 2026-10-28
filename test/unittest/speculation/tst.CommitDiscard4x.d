@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,7 @@
 #pragma D option quiet
 #pragma D option nspec=8
 
-BEGIN
+dtrace:::BEGIN
 {
 	a = speculation();
 	b = speculation();
@@ -28,55 +28,55 @@ BEGIN
 	       a, b, c, d, e, f, g, h);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(a);
 	printf("Speculating on id: %d\n", a);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(b);
 	printf("Speculating on id: %d\n", b);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(c);
 	printf("Speculating on id: %d\n", c);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(d);
 	printf("Speculating on id: %d\n", d);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(e);
 	printf("Speculating on id: %d\n", e);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(f);
 	printf("Speculating on id: %d\n", f);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(g);
 	printf("Speculating on id: %d\n", g);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	speculate(h);
 	printf("Speculating on id: %d\n", h);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	commit(h);
 	discard(g);
@@ -88,12 +88,12 @@ BEGIN
 	discard(a);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

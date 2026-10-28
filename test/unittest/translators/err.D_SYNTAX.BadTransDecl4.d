@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -37,7 +37,7 @@ translator struct output_struct < struct new_struct *newvar >
 };
 
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("Test translator declaration without terminating semi-colon");
 	exit(0);

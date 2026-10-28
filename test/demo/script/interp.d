@@ -9,7 +9,7 @@
 
 /* @@trigger: none */
 
-BEGIN
+dtrace:::BEGIN
 {
 	trace("hello");
 	exit(0);

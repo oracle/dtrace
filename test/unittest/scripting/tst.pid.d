@@ -15,7 +15,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("The pid is %d\n", $pid);
 	exit(0);

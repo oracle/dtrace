@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -61,26 +61,26 @@ io:::wait-done
 	self->wait_read_started = 0;
 }
 
-END
+dtrace:::END
 /(wait_write_start > 0) && (wait_write_start == wait_write_done)/
 {
 	printf("wait-write-expected: yes\n");
 }
 
-END
+dtrace:::END
 /(wait_write_start == 0) || (wait_write_start != wait_write_done)/
 {
 	printf("wait-write-expected: no (%d / %d)\n", wait_write_start,
 	    wait_write_done);
 }
 
-END
+dtrace:::END
 /(wait_read_start > 0) && (wait_read_start == wait_read_done)/
 {
 	printf("wait-read-expected: yes\n");
 }
 
-END
+dtrace:::END
 /(wait_read_start == 0) || (wait_read_start != wait_read_done)/
 {
 	printf("wait-read-expected: no (%d / %d)\n", wait_read_start,

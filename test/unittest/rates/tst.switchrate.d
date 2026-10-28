@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -31,13 +31,13 @@
 
 int n;
 
-tick-100msec
+profile:::tick-100msec
 /n < 100/
 {
 	printf("%10d\n", n++);
 }
 
-tick-100msec
+profile:::tick-100msec
 /n == 100/
 {
 	exit(0);

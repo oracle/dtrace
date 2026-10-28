@@ -1,13 +1,13 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	@["j-church"] = quantize(1, 100);
 	@["j-church"] = quantize(1, -99);
@@ -15,12 +15,12 @@ BEGIN
 	val = 123;
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	@["k-ingleside"] = quantize(1, -val);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	@["l-taraval"] = quantize(0, -val);
 	@["l-taraval"] = quantize(-1, -val);
@@ -28,7 +28,7 @@ BEGIN
 	@["l-taraval"] = quantize(1, val);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	@["m-oceanview"] = quantize(1, (1 << 63) - 1);
 	@["m-oceanview"] = quantize(1);
@@ -36,7 +36,7 @@ BEGIN
 	@["m-oceanview"] = quantize(8, 400000);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	@["n-judah"] = quantize(1, val);
 	@["n-judah"] = quantize(2, val);
@@ -46,7 +46,7 @@ BEGIN
 
 this long long val;
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->i = 1;
 	this->val = (((long long) 1) << 63) - 1;
@@ -68,7 +68,7 @@ BEGIN
 	this->val >>= ((long long) 1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	this->i = 1;
 	this->val = (((long long) 1) << 63) - 4;
@@ -90,7 +90,7 @@ BEGIN
 	this->val >>= ((long long) 1);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }

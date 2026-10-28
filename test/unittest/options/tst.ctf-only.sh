@@ -8,7 +8,7 @@ dir=$tmpdir/ctf-only.$$
 mkdir -p "$dir" || exit 1
 
 "$dtrace" $dt_flags -e -xdebug -xbtfpath=none -n '
-BEGIN
+dtrace:::BEGIN
 {
 	this->size = sizeof(struct vmlinux`task_struct);
 }' >"$dir/output" 2>&1

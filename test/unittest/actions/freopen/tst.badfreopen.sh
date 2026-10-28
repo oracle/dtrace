@@ -1,14 +1,14 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
 script()
 {
 	$dtrace $dt_flags -wq -o $tmpfile -s /dev/stdin 2> $errfile <<EOF
-	BEGIN
+	dtrace:::BEGIN
 	{
 		/*
 		 * All of these should fail...
@@ -29,7 +29,7 @@ script()
 		printf("%d", ++i);
 	}
 
-	BEGIN
+	dtrace:::BEGIN
 	/i == 2/
 	{
 		/*
@@ -39,7 +39,7 @@ script()
 		exit(0);
 	}
 
-	BEGIN
+	dtrace:::BEGIN
 	{
 		exit(1);
 	}

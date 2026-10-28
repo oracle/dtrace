@@ -27,14 +27,14 @@ member=`bpftool btf dump id 1 | \
 
 # Try to access the flexible array.
 $dtrace $dt_flags -qn "
-BEGIN
+dtrace:::BEGIN
 {
 	i = pid - pid;			/* non-constant 0 value */
 	v = curthread->mm->$member[i];
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }"

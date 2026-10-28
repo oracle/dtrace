@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -20,7 +20,7 @@ $dtrace $dt_flags -s /dev/stdin <<EOF
 
 inline uint64_t NANOSEC = 1000000000;
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("%Y\n%Y\n%Y", (uint64_t)0, (uint64_t)1062609821 * NANOSEC,
 	    (uint64_t)0x7fffffff * NANOSEC);

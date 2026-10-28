@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -14,12 +14,12 @@
 #pragma D option quiet
 #pragma D option destructive
 
-BEGIN
+dtrace:::BEGIN
 {
 	system("/bin/ls >/dev/null");
 }
 
-exec-success
+proc:::exec-success
 /execname == "ls"/
 {
 	psargs = stringof(curpsinfo->pr_psargs);
@@ -28,7 +28,7 @@ exec-success
 	exit(psargs[strlen(psargs) - 1] == ' ' ? 1 : 0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(1);
 }

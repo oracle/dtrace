@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -65,7 +65,7 @@ struct bitRecord12 {
 	int c : 32;
 } var12;
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("sizeof(bitRecord1): %d\n", sizeof(var1));
 	printf("sizeof(bitRecord2): %d\n", sizeof(var2));
@@ -79,7 +79,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(1 != sizeof(var1)) || (2 != sizeof(var2)) || (3 != sizeof(var3)) ||
     (4 != sizeof(var4)) || (5 != sizeof(var5)) || (6 != sizeof(var6))
     || (7 != sizeof(var7)) || (8 != sizeof(var8)) || (12 != sizeof(var12))/

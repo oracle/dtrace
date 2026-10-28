@@ -15,7 +15,7 @@
  *
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	print("The arguments are %d %d\n", $-1);
 	exit(0);

@@ -1,6 +1,6 @@
 /* @@skip: Linux has no zones. */
 
-BEGIN {
+dtrace:::BEGIN {
 	trace(zonename);
 	exit(0);
 }

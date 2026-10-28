@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -19,7 +19,7 @@
  * from one test to the next.
  */
 
-BEGIN
+dtrace:::BEGIN
 {
 	base = (char *)alloca(0);
 	x = (char *) alloca(8);
@@ -31,7 +31,7 @@ BEGIN
 	printf("%x\n", x - base);
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	x[0] = 'a';
@@ -41,7 +41,7 @@ BEGIN
 	trace(basename(x));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	y = (char *) alloca(8);
@@ -54,7 +54,7 @@ BEGIN
 	trace(index(x, y));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	y = (char *) alloca(8);
@@ -67,7 +67,7 @@ BEGIN
 	trace(rindex(x, y));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	x[0] = 'a';
@@ -77,7 +77,7 @@ BEGIN
 	trace(strchr(x, '/'));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	x[0] = 'a';
@@ -87,7 +87,7 @@ BEGIN
 	trace(strrchr(x, '/'));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	x[0] = 'a';
@@ -97,7 +97,7 @@ BEGIN
 	trace(strlen(x));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	y = (char *) alloca(8);
@@ -110,7 +110,7 @@ BEGIN
 	trace(strjoin(x, y));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	y = (char *) alloca(8);
@@ -123,7 +123,7 @@ BEGIN
 	trace(strstr(x, y));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	y = (char *) alloca(8);
@@ -136,7 +136,7 @@ BEGIN
 	trace(strtok(x, y));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	x[0] = '/';
@@ -144,7 +144,7 @@ BEGIN
 	trace(strtok(NULL, x));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	x = (char *) alloca(8);
 	x[0] = 'a';
@@ -154,12 +154,12 @@ BEGIN
 	trace(substr(x, 0, 1));
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	exit(0);
 }
 
-ERROR
+dtrace:::ERROR
 {
 	exit(0);
 }

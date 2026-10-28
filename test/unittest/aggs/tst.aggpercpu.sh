@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -18,7 +18,7 @@ cd $DIRNAME
 #
 
 $dtrace  $dt_flags -xaggpercpu -qn '
-    profile-600ms
+    profile:::profile-600ms
     {
         printf("cpu %d\n", cpu);
         @xcnt = count();
@@ -28,7 +28,7 @@ $dtrace  $dt_flags -xaggpercpu -qn '
         @xmax = max(40 * cpu - 15);
         @xsum = sum(50 * cpu);
     }
-    tick-900ms
+    profile:::tick-900ms
     {
         exit(0)
     }

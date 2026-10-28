@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -111,4 +111,4 @@
 inline int foo = 0;
 #pragma D binding "1.1" foo
 
-BEGIN { exit(0); }
+dtrace:::BEGIN { exit(0); }

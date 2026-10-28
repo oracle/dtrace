@@ -15,7 +15,7 @@
 
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	scope_explicit = (struct testprobe``dtrace_scope_test_type *)NULL;
 	scope_implicit = (struct ``dtrace_scope_test_type *)NULL;

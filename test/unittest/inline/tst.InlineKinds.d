@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -29,7 +29,7 @@ inline struct s i3 = xlate < struct s > (i0);		/* translator */
 inline int i4[int x, int y] = x + y;			/* associative array */
 inline int i5[int x] = (xlate < struct s > (x)).s_x;	/* array by xlate */
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("i0 = %d\n", i0);
 	printf("i1 = %s\n", i1);

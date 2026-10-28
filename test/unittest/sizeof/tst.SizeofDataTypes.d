@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -66,7 +66,7 @@ enum colors {
 
 int *pointer;
 
-BEGIN
+dtrace:::BEGIN
 {
 	printf("sizeof(new_char): %d\n", sizeof(new_char));
 	printf("sizeof(new_short): %d\n", sizeof(new_short));
@@ -87,7 +87,7 @@ BEGIN
 	exit(0);
 }
 
-END
+dtrace:::END
 /(1 != sizeof(new_char)) || (2 != sizeof(new_short)) ||
     (4 != sizeof(new_int)) ||
     ((4 != sizeof(new_long)) && (8 != sizeof(new_long))) ||

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -33,7 +33,7 @@ EOF
 ${CC} -o parent.x parent.c
 
 $dtrace $dt_flags -qn '
-BEGIN { dtpid = pid; }
+dtrace:::BEGIN { dtpid = pid; }
 proc:::exec
 /ppid == dtpid && execname == "parent.x"/
 {

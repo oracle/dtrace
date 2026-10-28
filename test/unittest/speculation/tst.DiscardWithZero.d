@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -13,25 +13,25 @@
  */
 #pragma D option quiet
 
-BEGIN
+dtrace:::BEGIN
 {
 	self->discardFlag = 0;
 }
 
-BEGIN
+dtrace:::BEGIN
 {
 	discard(0);
 	self->discardFlag++;
 }
 
-BEGIN
+dtrace:::BEGIN
 /0 < self->discardFlag/
 {
 	printf("discard(), self->discardFlag = %d\n", self->discardFlag);
 	exit(0);
 }
 
-BEGIN
+dtrace:::BEGIN
 /0 == self->discardFlag/
 {
 	printf("discard(), self->discardFlag = %d\n", self->discardFlag);
