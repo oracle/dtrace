@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Oracle Linux DTrace.
-# Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 #
@@ -11,6 +11,8 @@ dtrace=$1
 DIRNAME="$tmpdir/modpath.$$.$RANDOM"
 mkdir -p $DIRNAME
 cd $DIRNAME
+# Exercise CTF archive lookup without falling back to BTF.
+dt_flags="$dt_flags -xbtfpath=none"
 
 # Create the directory where the CTF archive will end up.
 mkdir -p mydirectory/kernel
@@ -25,11 +27,14 @@ else
 	echo basic check on DTrace passed
 fi
 
-# Verify that modpath directs us to the (empty) directory, with no CTF info.
-$dtrace $dt_flags -xmodpath=mydirectory -lvP rawtp > empty.out
-if [ $? -ne 0 ]; then
-	echo ERROR: empty check on DTrace failed
-	cat empty.out
+# Without CTF or BTF, listing rawtp probes must fail with missing type data.
+if $dtrace $dt_flags -xmodpath=mydirectory -lvP rawtp > empty.out 2> empty.err; then
+	echo ERROR: empty check on DTrace unexpectedly succeeded
+	cat empty.out empty.err
+	exit 1
+elif ! grep -Fq 'No type data (CTF or BTF) found for vmlinux' empty.err; then
+	echo ERROR: empty check on DTrace failed for an unexpected reason
+	cat empty.out empty.err
 	exit 1
 else
 	echo empty check on DTrace passed
@@ -49,30 +54,22 @@ else
 fi
 
 # Check the amount of CTF info we got from each run by seeing how many
-# rawtp args have non-trivial type info.  While nempty should be 0,
-# nbasic and nfinal should be substantial and likely identical (but
-# we allow a generous tolerance).
+# rawtp args have non-trivial type info.  Both nbasic and nfinal should be
+# substantial and likely identical (but we allow a generous tolerance).
 
 nbasic=`gawk '/^[	 ]*args\[/ && !/uint64_t/ && !/void \*/' basic.out | wc -l`
-nempty=`gawk '/^[	 ]*args\[/ && !/uint64_t/ && !/void \*/' empty.out | wc -l`
 nfinal=`gawk '/^[	 ]*args\[/ && !/uint64_t/ && !/void \*/' final.out | wc -l`
 
-if [ $nempty -ne 0 ]; then
-	echo ERROR: empty check turned up some CTF info
-	cat empty.out
-	echo got nbasic $nbasic nempty $nempty nfinal $nfinal
-	exit 1
-fi
 if [ $nbasic -lt 1000 ]; then
 	echo ERROR: basic check turned up little CTF info
 	cat basic.out
-	echo got nbasic $nbasic nempty $nempty nfinal $nfinal
+	echo got nbasic $nbasic nfinal $nfinal
 	exit 1
 fi
 if [ $nfinal -lt 1000 ]; then
 	echo ERROR: final check turned up little CTF info
 	cat final.out
-	echo got nbasic $nbasic nempty $nempty nfinal $nfinal
+	echo got nbasic $nbasic nfinal $nfinal
 	exit 1
 fi
 if [ $nbasic -gt $(($nfinal + 200)) -o $nfinal -gt $((nbasic + 200)) ]; then
@@ -81,7 +78,7 @@ if [ $nbasic -gt $(($nfinal + 200)) -o $nfinal -gt $((nbasic + 200)) ]; then
 	cat basic.out
 	echo ==== final.out:
 	cat final.out
-	echo got nbasic $nbasic nempty $nempty nfinal $nfinal
+	echo got nbasic $nbasic nfinal $nfinal
 	exit 1
 fi
 
