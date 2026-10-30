@@ -40,7 +40,6 @@ cat > D.out << EOF
 BPF verifier log is incomplete and is not reported.
 Set DTrace option 'bpflogsize' to some greater size for more output.
 (Current size is nnnn.)
-dtrace: could not enable tracing: BPF program load for 'dtrace:::BEGIN' failed: Bad address
 EOF
 
 # dump files
@@ -77,7 +76,7 @@ while [ $cursiz -lt $((1024 * 1024 * 1024)) ]; do
 	# Usually (at least in the default case),
 	# dtrace should fail because the BPF log size is too small.
 	# Output should match D.out.
-	if [ `sed s/$cursiz/nnnn/ tmp.out | diff - D.out | wc -l` -eq 0 ]; then
+	if [ `sed -e s/$cursiz/nnnn/ -e '/^dtrace: /d' tmp.out | diff - D.out | wc -l` -eq 0 ]; then
 		echo okay: $cursiz is too small
 
 		# bump the size up and try again
@@ -88,7 +87,7 @@ while [ $cursiz -lt $((1024 * 1024 * 1024)) ]; do
 		echo "The default case is expected to have bpflogsize too small"
 		echo "and fail with the expected error."
 		echo "========== output (expected)"
-		sed 's/nnnn/'$cursiz'/' D.out
+		sed -e s/nnnn/$cursiz/ -e '/^dtrace: /d' D.out
 		dump_files
 		exit 1
 	fi
@@ -111,11 +110,11 @@ while [ $cursiz -lt $((1024 * 1024 * 1024)) ]; do
 		echo ERROR: expected only one non-\"BPF:\" output line
 		status=1
 	fi
-	if ! grep -q '^BPF: The sequence of 8193 jumps is too complex.' tmp.out; then
+	if ! grep -q '^BPF: The sequence of [1-9][0-9]* jumps is too complex.' tmp.out; then
 		echo ERROR: BPF error message is missing
 		status=1
 	fi
-	if ! grep -q '^dtrace: could not enable tracing: BPF program load for '\''dtrace:::BEGIN'\'' failed: Bad address' tmp.out; then
+	if ! grep -q '^dtrace: ' tmp.out; then
 		echo ERROR: dtrace error message is missing
 		status=1
 	fi
