@@ -61,7 +61,7 @@ write_elf(const char *path, void *contents, size_t size)
 	char strings[] = "\0.shstrtab\0.ctf";
 	int fd;
 
-	/* Kernel archives are ELF files containing a .ctf section. */
+	/* Wrap CTF data in an ELF file containing a .ctf section. */
 	CHECK(elf_version(EV_CURRENT) != EV_NONE);
 	CHECK((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600)) >= 0);
 	CHECK((elf = elf_begin(fd, ELF_C_WRITE, NULL)) != NULL);
@@ -91,7 +91,7 @@ write_elf(const char *path, void *contents, size_t size)
 }
 
 static int
-write_archive(const char *path, const char *embedded)
+write_archive(const char *path, const char *embedded, const char *rawpath)
 {
 	ctf_dict_t *dicts[2];
 	const char *names[] = { "shared_ctf", "vmlinux" };
@@ -134,6 +134,9 @@ write_archive(const char *path, const char *embedded)
 	ctf_close(dicts[0]);
 
 	CHECK(write_elf(path, contents, size) == 0);
+	CHECK((raw = fopen(rawpath, "wb")) != NULL);
+	CHECK(fwrite(contents, size, 1, raw) == 1);
+	CHECK(fclose(raw) == 0);
 	free(contents);
 	return 0;
 }
@@ -307,16 +310,20 @@ main(int argc, char **argv)
 {
 #ifdef HAVE_LIBCTF
 	char archive[PATH_MAX], btf[PATH_MAX], missing[PATH_MAX], embedded[PATH_MAX];
+	char raw[PATH_MAX];
 
 	CHECK(argc == 2);
 	snprintf(archive, sizeof(archive), "%s/test.ctfa", argv[1]);
 	snprintf(btf, sizeof(btf), "%s/vmlinux", argv[1]);
 	snprintf(missing, sizeof(missing), "%s/missing.ctfa", argv[1]);
 	snprintf(embedded, sizeof(embedded), "%s/ctf.ko", argv[1]);
-	CHECK(write_archive(archive, embedded) == 0);
+	snprintf(raw, sizeof(raw), "%s/raw.ctfa", argv[1]);
+	CHECK(write_archive(archive, embedded, raw) == 0);
 	CHECK(write_btf(btf) == 0);
 	CHECK(check_source(archive, "none", 1, 0) == 0);
 	CHECK(check_source(archive, "none", 1, 1) == 0);
+	CHECK(check_source(raw, "none", 1, 0) == 0);
+	CHECK(check_source(raw, "none", 1, 1) == 0);
 	CHECK(check_source(missing, argv[1], 0, 0) == 0);
 	CHECK(check_source(missing, argv[1], 0, 1) == 0);
 	CHECK(check_embedded(missing, embedded) == 0);

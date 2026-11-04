@@ -720,44 +720,27 @@ dt_module_load_sect(dtrace_hdl_t *dtp, dt_module_t *dmp, ctf_sect_t *ctsp)
 
 #ifdef HAVE_LIBCTF
 /*
- * libctf-nobfd cannot use the BFD-backed ctf_arc_open() helper, so extract
- * the .ctf section ourselves and open that with ctf_arc_bufopen().
+ * libctf-nobfd cannot use the BFD-backed ctf_arc_open() helper.  Open raw
+ * archives directly, or extract the .ctf section from ELF files, and pass
+ * the data to ctf_arc_bufopen().
  */
 static ctf_archive_t *
 dt_ctfa_open(dtrace_hdl_t *dtp, const char *ctfa_name)
 {
 	ctf_archive_t	*ctfa = NULL;
 	ctf_sect_t	ctsp = { 0 };
-	dt_module_t	*dmp;
-	char		dm_file[PATH_MAX];
-	const dt_modops_t	*dm_ops;
-	Elf		*dm_elf;
+	dt_module_t	mod = { 0 };
 	void		*ctfa_data = NULL;
+	int		fd;
 
-	dmp = dtp->dt_exec;
-	if (dmp == NULL || strcmp(dmp->dm_name, "vmlinux") != 0)
-		dmp = dt_module_lookup_by_name(dtp, "vmlinux");
-	if (dmp == NULL) {
-		dtp->dt_ctferr = ECTF_INTERNAL;
+	if ((fd = open(ctfa_name, O_RDONLY)) == -1) {
+		dtp->dt_ctferr = errno;
 		return NULL;
 	}
 
-	/*
-	 * Borrow the registered vmlinux module as the ELF loader context, but
-	 * leave its persistent module state exactly as we found it.
-	 */
-	memcpy(dm_file, dmp->dm_file, sizeof(dm_file));
-	dm_ops = dmp->dm_ops;
-	dm_elf = dmp->dm_elf;
-
-	if (strlcpy(dmp->dm_file, ctfa_name, sizeof(dmp->dm_file)) >=
-	    sizeof(dmp->dm_file)) {
-		dtp->dt_ctferr = ENAMETOOLONG;
-		goto out;
-	}
-
 	errno = 0;
-	if (dt_module_init_elf_impl(dtp, dmp, 0) != 0) {
+	mod.dm_elf = elf_begin(fd, ELF_C_READ_MMAP, NULL);
+	if (mod.dm_elf == NULL) {
 		dtp->dt_ctferr = errno != 0 ? errno : ECTF_FMT;
 		goto out;
 	}
@@ -765,9 +748,15 @@ dt_ctfa_open(dtrace_hdl_t *dtp, const char *ctfa_name)
 	ctsp.cts_name = ".ctf";
 	ctsp.cts_entsize = 0;
 
-	if (dt_module_load_sect(dtp, dmp, &ctsp) == -1) {
-		dtp->dt_ctferr = ECTF_FMT;
-		goto out;
+	if (elf_kind(mod.dm_elf) == ELF_K_ELF) {
+		strcpy(mod.dm_name, "CTF archive");
+		if (dt_module_load_sect(dtp, &mod, &ctsp) == -1) {
+			dtp->dt_ctferr = ECTF_FMT;
+			goto out;
+		}
+	} else {
+		/* libctf validates the raw archive or dictionary header. */
+		ctsp.cts_data = elf_rawfile(mod.dm_elf, &ctsp.cts_size);
 	}
 
 	if (ctsp.cts_data == NULL || ctsp.cts_size == 0) {
@@ -792,13 +781,9 @@ dt_ctfa_open(dtrace_hdl_t *dtp, const char *ctfa_name)
 
 out:
 	free(ctfa_data);
-	if (dmp->dm_elf != dm_elf) {
-		if (dmp->dm_elf != NULL)
-			elf_end(dmp->dm_elf);
-		dmp->dm_elf = dm_elf;
-	}
-	dmp->dm_ops = dm_ops;
-	memcpy(dmp->dm_file, dm_file, sizeof(dmp->dm_file));
+	if (mod.dm_elf != NULL)
+		elf_end(mod.dm_elf);
+	close(fd);
 	return ctfa;
 }
 #endif
