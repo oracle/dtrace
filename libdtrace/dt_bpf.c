@@ -414,7 +414,8 @@ dt_bpf_raw_tracepoint_open(const void *tp, int fd)
 }
 
 static int
-have_helper(uint32_t func_id)
+have_helper(uint32_t func_id, enum bpf_prog_type ptype,
+	    enum bpf_attach_type atype, uint32_t btf_id)
 {
 	char		log[DT_BPF_LOG_SIZE_SMALL] = { 0, };
 	char		*ptr = &log[0];
@@ -426,7 +427,7 @@ have_helper(uint32_t func_id)
 	int		fd;
 
 	/* If the program loads, we can use the helper. */
-	fd = dt_bpf_prog_attach(BPF_PROG_TYPE_KPROBE, 0, 0, 0, &dp,
+	fd = dt_bpf_prog_attach(ptype, atype, 0, btf_id, &dp,
 			      1, log, DT_BPF_LOG_SIZE_SMALL);
 	if (fd >= 0) {
 		close(fd);
@@ -463,7 +464,7 @@ dt_bpf_init_helpers(dtrace_hdl_t *dtp)
 
 	/* Verify the existence of some specific helpers. */
 #define BPF_HELPER_MAP(orig, alt)	\
-	if (!have_helper(BPF_FUNC_##orig)) \
+	if (!have_helper(BPF_FUNC_##orig, BPF_PROG_TYPE_KPROBE, 0, 0)) \
 			dtp->dt_bpfhelper[BPF_FUNC_##orig] = BPF_FUNC_##alt;
 
 	BPF_HELPER_MAP(probe_read_user, probe_read);
@@ -473,6 +474,9 @@ dt_bpf_init_helpers(dtrace_hdl_t *dtp)
 	BPF_HELPER_MAP(get_current_task_btf, unspec);
 	BPF_HELPER_MAP(task_pt_regs, unspec);
 #undef BPF_HELPER_MAP
+
+	/* This helper is checked with an fexit program during feature setup. */
+	dtp->dt_bpfhelper[BPF_FUNC_get_func_ret] = BPF_FUNC_unspec;
 }
 
 static int
@@ -519,9 +523,16 @@ dt_bpf_init_features(dtrace_hdl_t *dtp)
 
 	btf_id = dt_btf_lookup_name_kind(dtp, dtp->dt_exec,
 					 "bpf_get_btf_vmlinux", BTF_KIND_FUNC);
-	if (btf_id >= 0 &&
-	    have_attach_type(BPF_PROG_TYPE_TRACING, BPF_TRACE_FENTRY, btf_id))
+	if (btf_id != BTF_TYPE_NONE &&
+	    have_attach_type(BPF_PROG_TYPE_TRACING, BPF_TRACE_FENTRY, btf_id)) {
 		BPF_SET_FEATURE(dtp, BPF_FEAT_FENTRY);
+
+		/* get_func_ret is only available to tracing programs. */
+		if (have_helper(BPF_FUNC_get_func_ret, BPF_PROG_TYPE_TRACING,
+				BPF_TRACE_FEXIT, btf_id))
+			dtp->dt_bpfhelper[BPF_FUNC_get_func_ret] =
+							BPF_FUNC_get_func_ret;
+	}
 }
 
 void
