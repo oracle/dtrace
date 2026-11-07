@@ -1,7 +1,7 @@
 %{
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2006, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -152,6 +152,8 @@ int yylex (void);
 %type	<l_decl>	abstract_declarator
 %type	<l_decl>	direct_abstract_declarator
 %type	<l_decl>	translator_input_type
+
+%type	<l_str>		offsetof_member
 
 %type	<l_node>	parameter_type_list
 %type	<l_node>	parameter_list
@@ -387,13 +389,19 @@ postfix_expression:
 			$$ = OP1(DT_TOK_POSTDEC, $1);
 		}
 	|	DT_TOK_OFFSETOF DT_TOK_LPAR type_name DT_TOK_COMMA 
-		    DT_TOK_IDENT DT_TOK_RPAR {
+		    offsetof_member DT_TOK_RPAR {
 			$$ = dt_node_offsetof($3, $5);
 		}
 	|	DT_TOK_XLATE DT_TOK_LT type_name DT_TOK_GT
 		    DT_TOK_LPAR expression DT_TOK_RPAR {
 			$$ = OP2(DT_TOK_XLATE, dt_node_type($3), $6);
 		}
+	;
+
+/* A member name can also be a typedef name in an unrelated scope. */
+offsetof_member:
+		DT_TOK_IDENT
+	|	DT_TOK_TNAME
 	;
 
 unary_expression:
