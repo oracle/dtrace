@@ -16,17 +16,17 @@
 #pragma D option quiet
 
 dtrace:::BEGIN {
-	printf("offset is %i\n", offsetof(struct rds`rds_message, atomic));
+	printf("offset is %i\n", offsetof(struct `flow_dissector_key_icmp, code));
 }
 
 dtrace:::BEGIN
-/ offsetof(struct rds`rds_message, atomic) == 0 /
+/ offsetof(struct `flow_dissector_key_icmp, code) == 0 /
 {
 	exit(1);
 }
 
 dtrace:::BEGIN
-/ offsetof(struct rds`rds_message, atomic) != 0 /
+/ offsetof(struct `flow_dissector_key_icmp, code) != 0 /
 {
 	exit(0);
 }
