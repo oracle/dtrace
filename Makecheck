@@ -46,6 +46,12 @@ help::
 	@printf "check-verbose-quick            Report successes too.\n" >&2
 	@printf "check-installed-quick          Quickly check the installed DTrace.\n" >&2
 	@printf "check-installed-verbose-quick  Report successes too.\n" >&2
+	@printf "check-expensive               Run the long process/locking race tests.\n" >&2
+	@printf "check-verbose-expensive       Report race-test successes too.\n" >&2
+	@printf "check-stress-compare          Keep output checks when testing under load.\n" >&2
+	@printf "check-verbose-stress-compare  Report successes under load too.\n" >&2
+	@printf "check-all                     Include smoke and expensive tests.\n" >&2
+	@printf "check-verbose-all             Report all successes too.\n" >&2
 	@printf "check-module-loading           Check that all modules load.\n" >&2
 	@printf "check-installed-module-loading Check that all modules load, using\n">&2
 	@printf "                               the installed DTrace for autoinstallation.\n" >&2
@@ -79,6 +85,27 @@ check-quick: RUNTESTFLAGS+=--skip-longer
 
 check-verbose-quick: check-verbose
 check-verbose-quick: RUNTESTFLAGS+=--skip-longer
+
+# Explicit periodic coverage: expensive races are omitted from ordinary checks.
+check-expensive: check
+check-expensive: RUNTESTFLAGS+=--testsuites=expensive --comparison
+
+check-verbose-expensive: check-verbose
+check-verbose-expensive: RUNTESTFLAGS+=--testsuites=expensive --comparison
+
+# Use the same load-compatible suite selection as check-stress, while retaining
+# expected-output checks.  Do not inherit its --no-comparison setting.
+check-stress-compare: check
+check-stress-compare: RUNTESTFLAGS+=--testsuites=unittest,internals,demo,smoke --comparison
+
+check-verbose-stress-compare: check-verbose
+check-verbose-stress-compare: RUNTESTFLAGS+=--testsuites=unittest,internals,demo,smoke --comparison
+
+check-all: check
+check-all: RUNTESTFLAGS+=--testsuites=unittest,internals,stress,demo,smoke,expensive --comparison
+
+check-verbose-all: check-verbose
+check-verbose-all: RUNTESTFLAGS+=--testsuites=unittest,internals,stress,demo,smoke,expensive --comparison
 
 check-installed-stress-internal: check-installed-internal
 check-installed-stress-internal: RUNTESTFLAGS+=--testsuites=unittest,$(installed_internals)demo,smoke --no-comparison
@@ -148,3 +175,5 @@ PHONIES += check-probe-all-syscalls-internal
 PHONIES += check-installed-internal check-installed-stress-internal
 PHONIES += check-installed-verbose-internal
 PHONIES += check-installed-verbose-stress-internal
+PHONIES += check-expensive check-verbose-expensive check-all check-verbose-all
+PHONIES += check-stress-compare check-verbose-stress-compare

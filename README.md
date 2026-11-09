@@ -158,6 +158,21 @@ sudo make check-verbose
 ```
 
 Logs from test runs are stored in `test/log/<run_number>/`.
+
+Ordinary in-tree checks include the unit, internal, stress, demo, and smoke
+suites.  The long-running process and locking race tests have explicit targets:
+
+| Target | Coverage |
+|:-------|:---------|
+| `check-expensive` | Process lookup, process teardown, and locking race tests. |
+| `check-all` | All six suites, including the expensive race tests. |
+| `check-stress-compare` | The load-compatible suites used by `check-stress`, with expected-output comparisons enabled. |
+
+Each has a verbose counterpart: `check-verbose-expensive`, `check-verbose-all`,
+and `check-verbose-stress-compare`.  For periodic full coverage, run
+`sudo make check-all`; the expensive tests can take an hour or more.  The
+comparison-preserving stress target can report timing-dependent output
+differences under load, so the existing `check-stress` target remains available.
 The most recent logs are also available by via the `test/log/current/` symbolic link.
 
 The testsuite itself has more dependencies that need to be installed.

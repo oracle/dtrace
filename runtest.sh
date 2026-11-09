@@ -274,7 +274,7 @@ SKIP_LONGER=
 if [[ -n $DTRACE_TEST_TESTSUITES ]]; then
     TESTSUITES="${DTRACE_TEST_TESTSUITES}"
 else
-    TESTSUITES="unittest internals stress demo"
+    TESTSUITES="unittest internals stress demo smoke"
 fi
 
 ONLY_TESTS=
