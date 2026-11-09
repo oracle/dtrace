@@ -27,7 +27,7 @@ INTERNAL_64BIT_TRIGGERS = libproc-pldd libproc-consistency libproc-sleeper \
     libproc-lookup-victim libproc-execing-bkpts libproc-execing-bkpts-victim \
     btf-cyclic-types btf-lazy-types shared-ctf module-discovery elf-symbols \
     uprobe-wildcards usdt-parser consumer-contracts fbt-return-paths \
-    allocation-failures
+    allocation-failures btf-malformed
 INTERNAL_32BIT_TRIGGERS := libproc-sleeper-32 libproc-sleeper-pie-32
 INTERNAL_TRIGGERS = $(INTERNAL_64BIT_TRIGGERS) $(if $(NATIVE_BITNESS_ONLY),,$(INTERNAL_32BIT_TRIGGERS))
 
@@ -308,3 +308,8 @@ allocation-failures_LDFLAGS := -Wl,--gc-sections -Wl,--wrap=malloc \
     -Wl,--wrap=dt_alloc -Wl,--wrap=dt_zalloc -Wl,--wrap=dt_calloc
 allocation-failures_DEPS := $(btf-lazy-types_DEPS)
 allocation-failures_LIBS := $(btf-lazy-types_LIBS)
+
+btf-malformed_CFLAGS := $(btf-cyclic-types_CFLAGS)
+btf-malformed_LDFLAGS := -Wl,--gc-sections
+btf-malformed_DEPS := $(btf-lazy-types_DEPS)
+btf-malformed_LIBS := $(btf-lazy-types_LIBS)
