@@ -110,10 +110,16 @@ int main(void) {
 		return 1;
 	}
 
-	if (ioctl(fd, DTRACEHIOC_HASUSDT, &main) < 0) {
-		perror("ioctl DTRACEHIOC_HASUSDT");
+	/* Only the deliberate EINVAL rejection establishes the assertion. */
+	if (ioctl(fd, DTRACEHIOC_HASUSDT, &main) >= 0) {
+		fprintf(stderr, "unsafe provider was accepted\n");
 		return 1;
 	}
+	if (errno != EINVAL) {
+		perror("unexpected ioctl DTRACEHIOC_HASUSDT failure");
+		return 1;
+	}
+	close(fd);
 
 	printf("%d\n", getpid());
 
@@ -129,7 +135,14 @@ fi
 
 rm -f $stash/unsafe:unsafe_prov:main:evil
 
-pid=`./unsafe_prov`
+if ! pid=`./unsafe_prov`; then
+	echo "helper failed before verifying provider rejection" >&2
+	exit 0
+fi
+if [[ ! $pid =~ ^[1-9][0-9]*$ ]]; then
+	echo "helper did not report a valid PID" >&2
+	exit 0
+fi
 
 if [ -f $stash/unsafe:unsafe_prov:main:evil -o -d $rootdir/unsafe$pid ]; then
 	find $stash $probes $rootdir/unsafe$pid -ls
