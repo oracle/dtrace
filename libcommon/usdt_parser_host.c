@@ -188,7 +188,7 @@ usdt_parser_host_read(int in, int timeout)
 		if (clock_gettime(CLOCK_REALTIME, &start) < 0)
 			no_adjustment = 1;
 
-		while ((ret = poll(&fd, 1, timeout_msec)) <= 0 && errno == EINTR) {
+		while ((ret = poll(&fd, 1, timeout_msec)) < 0 && errno == EINTR) {
 
 			if (no_adjustment || clock_gettime(CLOCK_REALTIME, &end) < 0)
 				continue; /* Abandon timeout adjustment */
@@ -201,6 +201,10 @@ usdt_parser_host_read(int in, int timeout)
 				timeout_msec = 0;
 		}
 
+		if (ret == 0) {
+			errno = ETIMEDOUT;
+			goto err;
+		}
 		if (ret < 0)
 			goto err;
 
