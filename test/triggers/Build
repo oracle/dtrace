@@ -26,7 +26,8 @@ INTERNAL_64BIT_TRIGGERS = libproc-pldd libproc-consistency libproc-sleeper \
     libproc-sleeper-pie libproc-dlmadopen libproc-lookup-by-name \
     libproc-lookup-victim libproc-execing-bkpts libproc-execing-bkpts-victim \
     btf-cyclic-types btf-lazy-types shared-ctf module-discovery elf-symbols \
-    uprobe-wildcards usdt-parser consumer-contracts fbt-return-paths
+    uprobe-wildcards usdt-parser consumer-contracts fbt-return-paths \
+    allocation-failures
 INTERNAL_32BIT_TRIGGERS := libproc-sleeper-32 libproc-sleeper-pie-32
 INTERNAL_TRIGGERS = $(INTERNAL_64BIT_TRIGGERS) $(if $(NATIVE_BITNESS_ONLY),,$(INTERNAL_32BIT_TRIGGERS))
 
@@ -300,3 +301,10 @@ fbt-return-paths_LDFLAGS := -Wl,--gc-sections \
     -Wl,--wrap=dt_cg_tramp_prologue -Wl,--wrap=dt_cg_tramp_epilogue
 fbt-return-paths_DEPS := $(btf-lazy-types_DEPS)
 fbt-return-paths_LIBS := $(btf-lazy-types_LIBS)
+
+allocation-failures_CFLAGS := $(btf-cyclic-types_CFLAGS)
+allocation-failures_LDFLAGS := -Wl,--gc-sections -Wl,--wrap=malloc \
+    -Wl,--wrap=calloc -Wl,--wrap=realloc -Wl,--wrap=free -Wl,--wrap=ctf_add_member_offset \
+    -Wl,--wrap=dt_alloc -Wl,--wrap=dt_zalloc -Wl,--wrap=dt_calloc
+allocation-failures_DEPS := $(btf-lazy-types_DEPS)
+allocation-failures_LIBS := $(btf-lazy-types_LIBS)
