@@ -26,7 +26,7 @@ INTERNAL_64BIT_TRIGGERS = libproc-pldd libproc-consistency libproc-sleeper \
     libproc-sleeper-pie libproc-dlmadopen libproc-lookup-by-name \
     libproc-lookup-victim libproc-execing-bkpts libproc-execing-bkpts-victim \
     btf-cyclic-types btf-lazy-types shared-ctf module-discovery elf-symbols \
-    uprobe-wildcards usdt-parser
+    uprobe-wildcards usdt-parser consumer-contracts
 INTERNAL_32BIT_TRIGGERS := libproc-sleeper-32 libproc-sleeper-pie-32
 INTERNAL_TRIGGERS = $(INTERNAL_64BIT_TRIGGERS) $(if $(NATIVE_BITNESS_ONLY),,$(INTERNAL_32BIT_TRIGGERS))
 
@@ -289,3 +289,8 @@ elf-symbols_LIBS := $(objdir)/build-libdtrace.a $(objdir)/build-libproc.a \
 usdt-parser_CFLAGS := -Ilibcommon
 usdt-parser_DEPS := libcommon.a
 usdt-parser_LIBS := $(objdir)/build-libcommon.a -lelf
+
+consumer-contracts_CFLAGS := $(btf-cyclic-types_CFLAGS)
+consumer-contracts_LDFLAGS := -Wl,--gc-sections -Wl,--wrap=dt_stid_lookup
+consumer-contracts_DEPS := $(btf-lazy-types_DEPS)
+consumer-contracts_LIBS := $(btf-lazy-types_LIBS)
