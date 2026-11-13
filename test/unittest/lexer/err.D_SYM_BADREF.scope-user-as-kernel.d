@@ -8,7 +8,7 @@
 /* @@trigger: testprobe */
 
 /*
- * ASSERTION: Userspace symbols cannot be referenced using kernel scoping.
+ * ASSERTION: A registered executable's symbols cannot use kernel scoping.
  */
 
 #pragma D option quiet

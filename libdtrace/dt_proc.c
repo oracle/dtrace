@@ -1,6 +1,6 @@
 /*
  * Oracle Linux DTrace.
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * http://oss.oracle.com/licenses/upl.
  */
@@ -86,6 +86,7 @@
 #include <dt_proc.h>
 #include <dt_pid.h>
 #include <dt_impl.h>
+#include <dt_module.h>
 
 enum dt_attach_time_t { ATTACH_START, ATTACH_ENTRY, ATTACH_FIRST_ARG_MAIN,
 			ATTACH_DIRECT_MAIN };
@@ -2386,11 +2387,52 @@ dt_proc_hash_destroy(dtrace_hdl_t *dtp)
 	dt_free(dtp, dph);
 }
 
+/* Register a load object's name against the file actually mapped by rtld. */
+static int
+dt_proc_user_module(void *arg, const prmap_t *map, const char *name)
+{
+	dtrace_hdl_t *dtp = arg;
+	const char *path;
+
+	if (map->pr_file == NULL || map->pr_file->prf_mapname == NULL)
+		return 0;
+
+	path = map->pr_file->prf_mapname;
+	if (path[0] != '/')
+		return 0;
+	if (name == NULL || name[0] == '\0')
+		name = path;
+
+	if (dt_module_create_user_file(dtp, name, path) == NULL)
+		dt_dprintf("cannot register mapped module %s: %s\n", name,
+		    dtrace_errmsg(dtp, dtrace_errno(dtp)));
+	return 0;
+}
+
+static void
+dt_proc_user_modules(dtrace_hdl_t *dtp, dt_proc_t *dpr)
+{
+	int err = dtp->dt_errno;
+
+	/*
+	 * Use the loader's choices, including RPATH/RUNPATH, $ORIGIN, and
+	 * indirect dependencies.  Iterate on the client thread through the
+	 * libproc proxy protocol so module-table updates remain serialized.
+	 * Registration is optional, as it is for the executable itself.
+	 */
+	dt_proc_lock(dpr);
+	dt_Pobject_iter(dtp, dpr->dpr_pid, dt_proc_user_module, dtp);
+	dt_proc_unlock(dpr);
+	dtp->dt_errno = err;
+}
+
 struct dtrace_proc *
 dtrace_proc_create(dtrace_hdl_t *dtp, const char *file, char *const *argv,
 	int flags)
 {
 	struct dtrace_proc *hdl;
+	char procname[64], path[PATH_MAX];
+	ssize_t len;
 	dt_ident_t *idp = dt_idhash_lookup(dtp->dt_macros, "target");
 	dt_proc_t *dpr;
 
@@ -2404,6 +2446,26 @@ dtrace_proc_create(dtrace_hdl_t *dtp, const char *file, char *const *argv,
 		free (hdl);
 		return NULL;
 	}
+
+	/*
+	 * Register the actual executable before the client compiles its D
+	 * programs.  Its directory need not be on the module search path,
+	 * particularly when file is a relative pathname.  Registration is
+	 * optional: a conflicting module name must not prevent tracing.
+	 */
+	snprintf(procname, sizeof(procname), "/proc/%d/exe", dpr->dpr_pid);
+	len = readlink(procname, path, sizeof(path));
+	if (len > 0 && len < sizeof(path)) {
+		int err = dtp->dt_errno;
+
+		path[len] = '\0';
+		if (dt_module_create_user_file(dtp, path, path) == NULL)
+			dt_dprintf("cannot register executable module %s: %s\n",
+			    path, dtrace_errmsg(dtp, dtrace_errno(dtp)));
+		dtp->dt_errno = err;
+	}
+
+	dt_proc_user_modules(dtp, dpr);
 
 	hdl->pid = dpr->dpr_pid;
 	if (idp != NULL && idp->di_id == 0)
@@ -2427,6 +2489,8 @@ dtrace_proc_grab_pid(dtrace_hdl_t *dtp, pid_t pid, int flags)
 		free (hdl);
 		return NULL;
 	}
+
+	dt_proc_user_modules(dtp, dpr);
 
 	hdl->pid = dpr->dpr_pid;
 	if (idp != NULL && idp->di_id == 0)

@@ -414,7 +414,7 @@ dt_module_create(dtrace_hdl_t *dtp, const char *name)
 }
 
 /* Create a userspace module using an already resolved pathname. */
-static dt_module_t *
+dt_module_t *
 dt_module_create_user_file(dtrace_hdl_t *dtp, const char *name, const char *file)
 {
 	dt_module_t	*dmp;
@@ -472,6 +472,12 @@ dt_module_create_user(dtrace_hdl_t *dtp, const char *name)
 		dt_set_errno(dtp, EINVAL);
 		return NULL;
 	}
+
+	/* Explicitly registered process objects take precedence over searches. */
+	dmp = dt_module_lookup_by_name(dtp, name);
+	if (dmp != NULL && !(dmp->dm_flags & DT_DM_KERNEL) &&
+	    dmp->dm_file[0] != '\0')
+		return dmp;
 
 	if (dt_list_empty(&dtp->dt_user_path) && dt_user_path_init(dtp) == -1)
 		return NULL;

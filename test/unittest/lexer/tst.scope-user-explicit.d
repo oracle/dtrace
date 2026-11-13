@@ -17,6 +17,6 @@
 
 dtrace:::BEGIN
 {
-	trace(&testprobe``main);
+	trace(&testprobe``main != NULL);
 	exit(0);
 }
