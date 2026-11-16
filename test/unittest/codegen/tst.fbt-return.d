@@ -13,7 +13,7 @@
  */
 
 dtrace:::BEGIN,
-fbt:vmlinux:adxl_get_component_names:return
+fbt:vmlinux:vfs_read:return
 {
 	exit(0);
 }
