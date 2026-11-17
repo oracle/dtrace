@@ -89,7 +89,12 @@ while [ $i -le 5 ]; do
 	./worker "$i" "$gate" &
 	worker_pid=$!
 
-	$dtrace $dt_flags -qn '
+	$dtrace $dt_flags -wqn '
+dtrace:::BEGIN
+{
+	system("printf x > gate.%d", $1);
+}
+
 uprobe:libswlife.so:life_probe:entry
 {
 	printf("%ld\n", arg0);
@@ -103,8 +108,12 @@ profile:::tick-8s
 ' $i > "dtrace.$i.out" 2> "dtrace.$i.err" &
 	dtrace_pid=$!
 
-	sleep 2
-	printf x > "$gate"
+	if ! wait "$dtrace_pid"; then
+		cat "dtrace.$i.err"
+		cat "dtrace.$i.out"
+		exit 1
+	fi
+	dtrace_pid=
 
 	if ! wait "$worker_pid"; then
 		cat "dtrace.$i.err"
@@ -112,13 +121,6 @@ profile:::tick-8s
 		exit 1
 	fi
 	worker_pid=
-
-	if ! wait "$dtrace_pid"; then
-		cat "dtrace.$i.err"
-		cat "dtrace.$i.out"
-		exit 1
-	fi
-	dtrace_pid=
 
 	if ! grep -qx "$i" "dtrace.$i.out"; then
 		echo "ERROR: iteration $i did not report the expected argument"

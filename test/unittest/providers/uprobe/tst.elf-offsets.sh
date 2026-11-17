@@ -172,6 +172,12 @@ export PATH="$PWD${PATH:+:$PATH}"
 mkfifo gate
 
 cat > trace.d <<'EOF'
+dtrace:::BEGIN
+{
+	/* Release up to three workers after all probes have been enabled. */
+	system("printf xxx > gate");
+}
+
 uprobe:libuoffset.so:lib_offset_probe:entry
 {
 	libhit = 1;
@@ -235,22 +241,8 @@ if [ "$have_nopie" = 1 ]; then
 	./nopieprog gate 30 & pids="$pids $!"
 fi
 
-$dtrace $dt_flags -qs trace.d > dtrace.out 2> dtrace.err &
+$dtrace $dt_flags -wqs trace.d > dtrace.out 2> dtrace.err &
 dtrace_pid=$!
-
-sleep 2
-expected=2
-[ "$have_nopie" = 1 ] && expected=3
-i=0
-while [ $i -lt $expected ]; do
-	printf x
-	i=$((i + 1))
-done > gate
-
-for pid in $pids; do
-	wait "$pid" || exit 1
-done
-pids=
 
 if ! wait "$dtrace_pid"; then
 	cat dtrace.err
@@ -258,6 +250,11 @@ if ! wait "$dtrace_pid"; then
 	exit 1
 fi
 dtrace_pid=
+
+for pid in $pids; do
+	wait "$pid" || exit 1
+done
+pids=
 
 for name in lib pie; do
 	if ! grep -q "^$name " dtrace.out; then

@@ -95,8 +95,12 @@ trap cleanup EXIT
 ./worker gate &
 worker_pid=$!
 
-# $dtrace $dt_flags -qn '
-$dtrace $dt_flags -n '
+$dtrace $dt_flags -wn '
+dtrace:::BEGIN
+{
+	system("printf x > gate");
+}
+
 uprobe:libswlazy.so:lazy_probe:entry
 {
 	self->pid = pid;
@@ -118,18 +122,15 @@ profile:::tick-5s
 ' > dtrace.out 2> dtrace.err &
 dtrace_pid=$!
 
-sleep 2
-printf x > gate
-
-wait "$worker_pid" || exit 1
-worker_pid=
-
 if ! wait "$dtrace_pid"; then
 	cat dtrace.err
 	cat dtrace.out
 	exit 1
 fi
 dtrace_pid=
+
+wait "$worker_pid" || exit 1
+worker_pid=
 
 echo success
 exit 0

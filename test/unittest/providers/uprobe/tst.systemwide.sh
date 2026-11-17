@@ -67,7 +67,7 @@ ${CC:-cc} $test_cppflags -fPIC -shared -o lib/libswuprobe.so probe.c || exit 1
 ${CC:-cc} $test_cppflags -Llib -o worker worker.c -lswuprobe || exit 1
 
 export LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-mkfifo gate
+mkfifo gate start
 
 pids=
 dtrace_pid=
@@ -79,14 +79,21 @@ cleanup()
 trap cleanup EXIT
 
 # These workers exist before DTrace attaches.  They are unrelated to DTrace
-# and wait until the tracing process has had time to enable its perf events.
+# and wait until BEGIN releases them after enabling all probes.
 ./worker gate 10 & p1=$!; pids="$pids $p1"
 ./worker gate 20 & p2=$!; pids="$pids $p2"
 
-$dtrace $dt_flags -qn '
+# Create the third worker only after BEGIN signals that probes are enabled.
+(
+	read -r line < start
+	exec ./worker /dev/null 30
+) & p3=$!; pids="$pids $p3"
+
+$dtrace $dt_flags -wqn '
 dtrace:::BEGIN
 {
 	bad = 0;
+	system("printf xx > gate; echo > start");
 }
 
 uprobe:libswuprobe.so:sw_probe:entry
@@ -127,23 +134,17 @@ profile:::tick-12s
 ' > dtrace.out 2> dtrace.err &
 dtrace_pid=$!
 
-sleep 2
-printf 'xx' > gate
-
-# This worker is created only after the probe has been enabled.
-./worker /dev/null 30 & p3=$!; pids="$pids $p3"
-
-wait "$p1" || exit 1
-wait "$p2" || exit 1
-wait "$p3" || exit 1
-pids=
-
 if ! wait "$dtrace_pid"; then
 	cat dtrace.err
 	cat dtrace.out
 	exit 1
 fi
 dtrace_pid=
+
+wait "$p1" || exit 1
+wait "$p2" || exit 1
+wait "$p3" || exit 1
+pids=
 
 if [ "$(awk '$1 == "E" { n++ } END { print n + 0 }' dtrace.out)" != 3 ] ||
    [ "$(awk '$1 == "R" { n++ } END { print n + 0 }' dtrace.out)" != 3 ] ||
