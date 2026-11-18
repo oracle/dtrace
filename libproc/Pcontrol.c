@@ -3045,7 +3045,7 @@ Psystem_daemon(pid_t pid, uid_t useruid, const char *sysslice)
 		 */
 		memset(buf, '\0', sizeof(buf));
 		if (S_ISREG(s.st_mode) &&
-		    (readlink(procname, buf, sizeof(buf)-1) == 0)) {
+		    (readlink(procname, buf, sizeof(buf)-1) > 0)) {
 			if((buf[0] == '/') && (strcmp(buf, "/var/") != 0))
 				return 0;
 		}
