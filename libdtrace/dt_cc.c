@@ -601,7 +601,8 @@ err:
 		close(catpipe[0]);
 		close(catpipe[1]);
 	}
-	fclose(ofp);
+	if (ofp != NULL)
+		fclose(ofp);
 	return NULL;
 }
 
